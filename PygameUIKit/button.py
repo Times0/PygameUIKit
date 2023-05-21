@@ -35,15 +35,17 @@ class EasyButton(EasyObject):
 class ButtonRect(EasyButton):
     def __init__(self, w, h, color, onclick_f, border_radius=0):
         super().__init__(onclick_f)
-        self.w = w
-        self.h = h
         self.color = color
         self.border_radius = border_radius
         self.rect = pg.Rect(0, 0, w, h)
-        self.surface = pg.surface.Surface((self.w, self.h), pg.SRCALPHA)
-        pg.draw.rect(self.surface, self.color, self.surface.get_rect(), border_radius=self.border_radius, width=0)
+        self.surface = None
         self.surface_hover = None
         self.surface_clicked = None
+        self.render()
+
+    def render(self):
+        self.surface = pg.surface.Surface((self.rect.w, self.rect.h), pg.SRCALPHA)
+        pg.draw.rect(self.surface, self.color, self.surface.get_rect(), border_radius=self.border_radius, width=0)
         self.render_hover()
         self.render_clicked()
 
@@ -87,7 +89,7 @@ class ButtonPngIcon(ButtonImage):
         screen.blit(self.image, self.rect)
 
 
-class ButtonThread(ButtonImage):
+class ButtonThreadImage(ButtonImage):
     def __init__(self, image_idle, image_working, image_hover, img_success, onclick_f):
         super().__init__(image_idle, onclick_f)
         self.image_idle = image_idle
@@ -135,20 +137,6 @@ class ButtonThread(ButtonImage):
     def success(self):
         self.isSucces = True
 
-    def handle_events(self, events):
-        for event in events:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                if self.is_mouse_on_button(event.pos):
-                    self.clicked = True
-
-            if event.type == pg.MOUSEBUTTONUP:
-                if self.clicked and not self.isWorking and not self.isSucces:
-                    self.onclick_f()
-                self.clicked = False
-
-            if event.type == pg.MOUSEMOTION:
-                self.is_hover = self.is_mouse_on_button(event.pos)
-
 
 class ButtonText(ButtonRect):
     def __init__(self,
@@ -171,3 +159,78 @@ class ButtonText(ButtonRect):
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
         screen.blit(self.text_surface, (x + 10, y + 10))
+
+
+class ButtonThreadText(ButtonRect):
+    def __init__(self, *, rect_color=(0, 0, 0),
+                 onclick_f=None,
+                 text_before="",
+                 text_during="",
+                 text_after="",
+                 border_radius=0,
+                 font=FONT,
+                 text_color=(255, 255, 255)):
+        self.text_before = text_before
+        self.text_during = text_during
+        self.text_after = text_after
+        self.font = font
+        self.font_color = text_color
+
+        self.text_surface_idle = self.font.render(self.text_before, True, self.font_color)
+        self.text_surface_working = None
+        self.text_surface_success = None
+        self.text_surface_hover = None
+        self.render_text_surfaces()
+
+        w = self.text_surface_idle.get_width() + 20
+        h = self.text_surface_idle.get_height() + 20
+        super().__init__(w, h, rect_color, onclick_f, border_radius)
+
+        self.isWorking = False
+        self.isSucces = False
+
+    def render_text_surfaces(self):
+        self.text_surface_idle = self.font.render(self.text_before, True, self.font_color)
+        self.text_surface_working = self.font.render(self.text_during, True, self.font_color)
+        self.text_surface_success = self.font.render(self.text_after, True, self.font_color)
+        self.text_surface_hover = self.font.render(self.text_before, True, self.font_color)
+
+    def draw(self, screen, x, y):
+        super().draw(screen, x, y)
+        if self.isSucces:
+            screen.blit(self.text_surface_success, (x + 10, y + 10))
+        elif self.isWorking:
+            screen.blit(self.text_surface_working, (x + 10, y + 10))
+        elif self.is_hover:
+            screen.blit(self.text_surface_hover, (x + 10, y + 10))
+        else:
+            screen.blit(self.text_surface_idle, (x + 10, y + 10))
+
+    def check_thread(self, thread):
+        if not thread:
+            self.idle()
+            return
+        # check if thread did not start or is running or is done
+        if thread.is_alive():
+            self.working()
+        else:
+            if thread.ident is None:
+                self.idle()
+            else:
+                self.success()
+
+    def working(self):
+        self.isWorking = True
+        self.rect.w = self.text_surface_working.get_width() + 20
+        super().render()
+
+    def idle(self):
+        self.isWorking = False
+        self.isSucces = False
+        self.rect.w = self.text_surface_idle.get_width() + 20
+        super().render()
+
+    def success(self):
+        self.isSucces = True
+        self.rect.w = self.text_surface_success.get_width() + 20
+        super().render()
