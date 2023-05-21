@@ -1,4 +1,4 @@
-from super_object import EasyObject
+from .super_object import EasyObject
 
 import pygame as pg
 

@@ -1,7 +1,7 @@
 import pygame as pg
 
-import utilis
-from super_object import EasyObject
+from . import utilis
+from .super_object import EasyObject
 
 pg.font.init()
 FONT = pg.font.Font(None, 25)

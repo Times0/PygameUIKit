@@ -1,7 +1,6 @@
-import pygame
 import pygame as pg
 
-from super_object import EasyObject
+from .super_object import EasyObject
 
 pg.font.init()
 COLOR_INACTIVE = pg.Color('lightskyblue3')
@@ -65,10 +64,10 @@ class InputBox(EasyObject):
                     pass
                 else:
                     self.text += event.unicode
-            if event.type == pygame.KEYUP and event.key == pygame.K_BACKSPACE:
+            if event.type == pg.KEYUP and event.key == pg.K_BACKSPACE:
                 self.last_backspace = 0
 
-        if self.active and pg.key.get_pressed()[pygame.K_BACKSPACE] and self.last_backspace + 100 < pg.time.get_ticks():
+        if self.active and pg.key.get_pressed()[pg.K_BACKSPACE] and self.last_backspace + 100 < pg.time.get_ticks():
             self.text = self.text[:-1]
             self.last_backspace = pg.time.get_ticks()
 
