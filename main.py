@@ -21,47 +21,51 @@ class Main:
         self.screen = pygame.display.set_mode((500, 500))
         self.clock = pygame.time.Clock()
 
-        self.text_input = text_input.InputBox(width=200)
+        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2)
         img = pygame.image.load("assets/play.png")
         img = pygame.transform.scale(img, (50, 50)).convert_alpha()
-        self.btn_play = button.ButtonPngIcon(img, do_nothing)
 
-        self.text_btn = button.ButtonText(BTN_BLUE, hello_world, "Hello World", border_radius=10,
-                                          font_color=(255, 255, 255))
+        self.text_btn = button.ButtonText(BTN_BLUE, hello_world, "Hello World", border_radius=10)
         self.snake = Snake(20, 20)
-        self.thread_snake = threading.Thread(target=self.snake.run)
-        self.btn_thread_snake = button.ButtonThreadText(rect_color=BTN_GREEN, onclick_f=self.thread_snake.start,
+        self.snake_thread = None
+        self.btn_thread_snake = button.ButtonThreadText(rect_color=BTN_GREEN,
+                                                        onclick_f=self.start_snake_thread,
                                                         text_before="Start Snake",
                                                         text_during="Snake running",
-                                                        text_after="Snake finished",
-                                                        border_radius=10,
-                                                        text_color=(255, 255, 255))
+                                                        text_after="Start Snake",
+                                                        border_radius=10)
 
-        self.easy_objects = Group(self.text_input, self.btn_play, self.text_btn, self.btn_thread_snake)
+        self.easy_objects = Group(self.text_input, self.text_btn, self.btn_thread_snake)
 
     def run(self):
         while not self.done:
             self.clock.tick(60)
             self.events()
-            self.draw()
+            self.draw(self.screen)
 
     def events(self):
         events = pygame.event.get()
-        self.btn_thread_snake.check_thread(self.thread_snake)
+        self.btn_thread_snake.check_thread(self.snake_thread)
         self.easy_objects.handle_events(events)
         for event in events:
             if event.type == pygame.QUIT:
                 self.done = True
 
-    def draw(self):
-        self.screen.fill((30, 30, 30))
-        self.snake.draw(self.screen)
-        self.text_input.draw(self.screen, 100, 300)
-        self.btn_play.draw(self.screen, 100, 100)
-        self.text_btn.draw(self.screen, 300, 100)
-        self.btn_thread_snake.draw(self.screen, 100, 200)
+    def draw(self,win):
+        W,H = self.screen.get_size()
+        win.fill((30, 30, 30))
+        self.snake.draw(win)
+        self.text_input.draw(win, W//2 - self.text_input.rect.w//2, H-200)
+        self.text_btn.draw(win, 300, 100)
+        self.btn_thread_snake.draw(win, 100, 100)
 
         pygame.display.flip()
+
+    def start_snake_thread(self):
+        if self.snake_thread and self.snake_thread.is_alive():
+            return
+        self.snake_thread = threading.Thread(target=self.snake.run)
+        self.snake_thread.start()
 
 
 def do_nothing():

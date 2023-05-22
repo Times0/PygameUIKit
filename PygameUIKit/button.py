@@ -138,18 +138,29 @@ class ButtonThreadImage(ButtonImage):
         self.isSucces = True
 
 
+def get_best_text_color(rgb_color):
+    r, g, b = rgb_color
+    if r + g + b < 500:
+        return 255, 255, 255
+    else:
+        return 0, 0, 0
+
+
 class ButtonText(ButtonRect):
     def __init__(self,
                  rect_color,
                  onclick_f,
                  text,
-                 font_color=(0, 0, 0),
                  font=FONT,
-                 border_radius=0):
+                 border_radius=0,
+                 font_color=None):
         self.text = text
-        self.font_color = font_color
+        if font_color is None:
+            self.text_color = get_best_text_color(rect_color)
+        else:
+            self.text_color = (255,255,255)
         self.font = font
-        self.text_surface = self.font.render(self.text, True, self.font_color)
+        self.text_surface = self.font.render(self.text, True, self.text_color)
         self.text_rect = self.text_surface.get_rect()
 
         w = self.text_surface.get_width() + 20
@@ -193,7 +204,6 @@ class ButtonThreadText(ButtonRect):
         self.text_surface_idle = self.font.render(self.text_before, True, self.font_color)
         self.text_surface_working = self.font.render(self.text_during, True, self.font_color)
         self.text_surface_success = self.font.render(self.text_after, True, self.font_color)
-        self.text_surface_hover = self.font.render(self.text_before, True, self.font_color)
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
@@ -201,8 +211,6 @@ class ButtonThreadText(ButtonRect):
             screen.blit(self.text_surface_success, (x + 10, y + 10))
         elif self.isWorking:
             screen.blit(self.text_surface_working, (x + 10, y + 10))
-        elif self.is_hover:
-            screen.blit(self.text_surface_hover, (x + 10, y + 10))
         else:
             screen.blit(self.text_surface_idle, (x + 10, y + 10))
 
@@ -221,6 +229,8 @@ class ButtonThreadText(ButtonRect):
 
     def working(self):
         self.isWorking = True
+        self.isSucces = False
+
         self.rect.w = self.text_surface_working.get_width() + 20
         super().render()
 
@@ -232,5 +242,6 @@ class ButtonThreadText(ButtonRect):
 
     def success(self):
         self.isSucces = True
+        self.isWorking = False
         self.rect.w = self.text_surface_success.get_width() + 20
         super().render()

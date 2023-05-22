@@ -13,7 +13,7 @@ class InputBox(EasyObject):
     def __init__(self, *,
                  text="",
                  font: pg.font.Font = FONT,
-                 width: int = None,
+                 fixed_width: int = None,
                  text_color=pg.Color('white'),
                  border_radius=0):
         """
@@ -25,11 +25,11 @@ class InputBox(EasyObject):
         self.text = text
         self.active = False
         self.font = font
-        self.max_width = width
+        self.max_width = fixed_width
         self.border_radius = border_radius
 
-        if width:
-            self.rect = pg.Rect(0, 0, width, 20, )  # width is fixed
+        if fixed_width:
+            self.rect = pg.Rect(0, 0, fixed_width, 20, )  # width is fixed
         else:
             self.rect = pg.Rect(0, 0, 0, 20)  # width will be changed when rendering
 
@@ -87,8 +87,11 @@ class InputBox(EasyObject):
         else:
             self.bg_trans = 0
         rect_img = pg.surface.Surface((self.rect.w, self.rect.h), pg.SRCALPHA)
-        pg.draw.rect(rect_img, (255, 255, 255, self.bg_trans), rect_img.get_rect(), border_radius=self.border_radius, width=0)
-        pg.draw.rect(rect_img, self.color, rect_img.get_rect(), border_radius=10, width=2)  # draw border
+        pg.draw.rect(rect_img,
+                     (255, 255, 255, self.bg_trans),
+                     rect_img.get_rect(),
+                     border_radius=self.border_radius)  # draw background
+        pg.draw.rect(rect_img, self.color, rect_img.get_rect(), border_radius=self.border_radius, width=1)  # draw border
         rect_img.blit(self.txt_surface, (5, 5))
 
         # draw cursor
