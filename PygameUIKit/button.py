@@ -1,5 +1,5 @@
 import pygame as pg
-
+import sys
 from . import utilis
 from .super_object import EasyObject
 
@@ -17,6 +17,12 @@ class EasyButton(EasyObject):
     def is_mouse_on_button(self, pos):
         return self.rect.collidepoint(pos)
 
+    def on_hover(self):
+        pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_HAND)
+
+    def on_unhover(self):
+        pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
+
     def handle_events(self, events):
         for event in events:
             if event.type == pg.MOUSEBUTTONDOWN:
@@ -29,7 +35,12 @@ class EasyButton(EasyObject):
                 self.clicked = False
 
             if event.type == pg.MOUSEMOTION:
+                was_hover = self.is_hover
                 self.is_hover = self.is_mouse_on_button(event.pos)
+                if self.is_hover and not was_hover:
+                    self.on_hover()
+                elif not self.is_hover and was_hover:
+                    self.on_unhover()
 
 
 class ButtonRect(EasyButton):
@@ -158,7 +169,7 @@ class ButtonText(ButtonRect):
         if font_color is None:
             self.text_color = get_best_text_color(rect_color)
         else:
-            self.text_color = (255,255,255)
+            self.text_color = (255, 255, 255)
         self.font = font
         self.text_surface = self.font.render(self.text, True, self.text_color)
         self.text_rect = self.text_surface.get_rect()
