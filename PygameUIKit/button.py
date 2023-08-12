@@ -1,27 +1,38 @@
 import pygame as pg
-import sys
+
+from PygameUIKit.super_object import Group, EasyObject
 from . import utilis
-from .super_object import EasyObject
 
 pg.font.init()
 FONT = pg.font.Font(None, 25)
 
 
 class EasyButton(EasyObject):
-    def __init__(self, onclick_f):
+    def __init__(self, onclick_f, ui_group: Group = None):
         super().__init__()
         self.is_hover = False
         self.clicked = False
         self.onclick_f = onclick_f
+        self.ui_group = ui_group
+        if self.ui_group:
+            self.ui_group.add(self)
 
     def is_mouse_on_button(self, pos):
         return self.rect.collidepoint(pos)
 
-    def on_hover(self):
+    def _on_hover(self):
+        self.on_hover()
         pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_HAND)
 
-    def on_unhover(self):
+    def on_hover(self):
+        pass
+
+    def _on_unhover(self):
+        self.on_unhover()
         pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
+
+    def on_unhover(self):
+        pass
 
     def handle_events(self, events):
         for event in events:
@@ -31,7 +42,7 @@ class EasyButton(EasyObject):
 
             if event.type == pg.MOUSEBUTTONUP:
                 if self.clicked and self.is_mouse_on_button(event.pos):
-                    self.onclick_f()
+                    self._on_click()
                 self.clicked = False
 
             if event.type == pg.MOUSEMOTION:
@@ -42,10 +53,14 @@ class EasyButton(EasyObject):
                 elif not self.is_hover and was_hover:
                     self.on_unhover()
 
+    def _on_click(self):
+        pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
+        self.onclick_f()
+
 
 class ButtonRect(EasyButton):
-    def __init__(self, w, h, color, onclick_f, border_radius=0):
-        super().__init__(onclick_f)
+    def __init__(self, w, h, color, onclick_f, border_radius=0, ui_group=None):
+        super().__init__(onclick_f, ui_group)
         self.color = color
         self.border_radius = border_radius
         self.rect = pg.Rect(0, 0, w, h)
@@ -88,15 +103,17 @@ class ButtonImage(EasyButton):
 
 
 class ButtonPngIcon(ButtonImage):
-    def __init__(self, image, onclick_f):
+    def __init__(self, image, hover_color, onclick_f):
         super().__init__(image, onclick_f)
+        self.hover_color = hover_color
 
     def draw(self, screen, x, y):
         self.rect.topleft = (x, y)
 
         # if hover then blit a transparent rect behind the image
         if self.is_hover or self.clicked:
-            pg.draw.rect(screen, (76, 80, 82, 100), self.rect, border_radius=5, )
+            draw_transparent_rect_with_border_radius(screen, self.rect, 10, self.hover_color, 100)
+
         screen.blit(self.image, self.rect)
 
 
@@ -149,7 +166,12 @@ class ButtonThreadImage(ButtonImage):
         self.isSucces = True
 
 
-def get_best_text_color(rgb_color):
+from pygame.color import Color
+
+
+def get_best_text_color(rgb_color: tuple | Color):
+    if isinstance(rgb_color, Color):
+        rgb_color = rgb_color.r, rgb_color.g, rgb_color.b
     r, g, b = rgb_color
     if r + g + b < 500:
         return 255, 255, 255
@@ -159,24 +181,25 @@ def get_best_text_color(rgb_color):
 
 class ButtonText(ButtonRect):
     def __init__(self,
-                 rect_color,
-                 onclick_f,
                  text,
+                 onclick_f,
+                 rect_color,
                  font=FONT,
                  border_radius=0,
-                 font_color=None):
+                 font_color=None,
+                 ui_group=None):
         self.text = text
         if font_color is None:
             self.text_color = get_best_text_color(rect_color)
         else:
-            self.text_color = (255, 255, 255)
+            self.text_color = font_color
         self.font = font
         self.text_surface = self.font.render(self.text, True, self.text_color)
         self.text_rect = self.text_surface.get_rect()
 
         w = self.text_surface.get_width() + 20
         h = self.text_surface.get_height() + 20
-        super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius)
+        super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group)
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
@@ -256,3 +279,10 @@ class ButtonThreadText(ButtonRect):
         self.isWorking = False
         self.rect.w = self.text_surface_success.get_width() + 20
         super().render()
+
+
+def draw_transparent_rect_with_border_radius(screen, rect, border_radius, color, alpha):
+    surf = pg.Surface(rect.size, pg.SRCALPHA)
+    pg.draw.rect(surf, color, surf.get_rect().inflate(-1, -1), border_radius=border_radius)
+    surf.set_alpha(alpha)
+    screen.blit(surf, rect)
