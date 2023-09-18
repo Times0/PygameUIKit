@@ -42,36 +42,29 @@ class InputBox(EasyObject):
         self.hover = False
         self._render()
 
-    def handle_events(self, events):
-        for event in events:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                if self.rect.collidepoint(event.pos):
-                    self.active = True
-                else:
-                    self.active = False
-                self.color = COLOR_ACTIVE if self.active else COLOR_INACTIVE
+    def handle_event(self, event):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.active = True
+            else:
+                self.active = False
+            self.color = COLOR_ACTIVE if self.active else COLOR_INACTIVE
 
-            if event.type == pg.MOUSEMOTION:
-                self.hover = self.rect.collidepoint(event.pos)
+        if event.type == pg.MOUSEMOTION:
+            self.hover = self.rect.collidepoint(event.pos)
 
-            # needs to be active to do the following
-            if not self.active:
-                continue
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_BACKSPACE:
-                    pass
-                elif event.key == pg.K_RETURN:
-                    pass
-                else:
-                    self.text += event.unicode
-            if event.type == pg.KEYUP and event.key == pg.K_BACKSPACE:
-                self.last_backspace = 0
-
-        if self.active and pg.key.get_pressed()[pg.K_BACKSPACE] and self.last_backspace + 100 < pg.time.get_ticks():
-            self.text = self.text[:-1]
-            self.last_backspace = pg.time.get_ticks()
-
-        self._render()
+        # needs to be active to do the following
+        if not self.active:
+            return
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_BACKSPACE:
+                pass
+            elif event.key == pg.K_RETURN:
+                pass
+            else:
+                self.text += event.unicode
+        if event.type == pg.KEYUP and event.key == pg.K_BACKSPACE:
+            self.last_backspace = 0
 
     def _render(self):
         self.txt_surface = self.font.render(self.text, True, self.text_color)
@@ -91,7 +84,8 @@ class InputBox(EasyObject):
                      (255, 255, 255, self.bg_trans),
                      rect_img.get_rect(),
                      border_radius=self.border_radius)  # draw background
-        pg.draw.rect(rect_img, self.color, rect_img.get_rect(), border_radius=self.border_radius, width=1)  # draw border
+        pg.draw.rect(rect_img, self.color, rect_img.get_rect(), border_radius=self.border_radius,
+                     width=1)  # draw border
         rect_img.blit(self.txt_surface, (5, 5))
 
         # draw cursor

@@ -1,8 +1,8 @@
-import threading
-
 import pygame
+from pygame import Color
 
 from PygameUIKit import button, text_input, Group
+from PygameUIKit.slider import Slider
 
 #
 #
@@ -14,28 +14,23 @@ RED = (255, 0, 0)
 BTN_GREEN = (0, 169, 0)
 BTN_BLUE = (83, 131, 232)
 
+img_play = pygame.image.load("assets/play.png")
+img_stop = pygame.image.load("assets/stop.png")
 
-class Main:
+
+class Demo:
     def __init__(self):
         self.done = False
         self.screen = pygame.display.set_mode((500, 500))
         self.clock = pygame.time.Clock()
 
+        self.easy_objects = Group()
         self.text_input = text_input.InputBox(fixed_width=200, border_radius=2)
-        img = pygame.image.load("assets/play.png")
-        img = pygame.transform.scale(img, (50, 50)).convert_alpha()
+        self.btn_pause = button.ButtonTwoStates(img_play, img_stop, do_nothing, ui_group=self.easy_objects)
+        self.btn_png = button.ButtonPngIcon(img_play, hello_world, inflate=10, ui_group=self.easy_objects)
 
-        self.text_btn = button.ButtonText(BTN_BLUE, hello_world, "Hello World", border_radius=10)
-        self.snake = Snake(20, 20)
-        self.snake_thread = None
-        self.btn_thread_snake = button.ButtonThreadText(rect_color=BTN_GREEN,
-                                                        onclick_f=self.start_snake_thread,
-                                                        text_before="Start Snake",
-                                                        text_during="Snake running",
-                                                        text_after="Start Snake",
-                                                        border_radius=10)
-
-        self.easy_objects = Group(self.text_input, self.text_btn, self.btn_thread_snake)
+        self.slider = Slider(0, 100, 1, ui_group=self.easy_objects)
+        self.easy_objects.add(self.text_input)
 
     def run(self):
         while not self.done:
@@ -45,27 +40,21 @@ class Main:
 
     def events(self):
         events = pygame.event.get()
-        self.btn_thread_snake.check_thread(self.snake_thread)
-        self.easy_objects.handle_events(events)
         for event in events:
+            self.easy_objects.handle_event(event)
             if event.type == pygame.QUIT:
                 self.done = True
 
-    def draw(self,win):
-        W,H = self.screen.get_size()
-        win.fill((30, 30, 30))
-        self.snake.draw(win)
-        self.text_input.draw(win, W//2 - self.text_input.rect.w//2, H-200)
-        self.text_btn.draw(win, 300, 100)
-        self.btn_thread_snake.draw(win, 100, 100)
+    def draw(self, win):
+        W, H = self.screen.get_size()
+        win.fill(Color(224, 224, 224))
+        self.text_input.draw(win, W // 2 - self.text_input.rect.w // 2, H - 200)
+        self.btn_pause.draw(win, 100, 200)
+        self.btn_png.draw(win, 100, 300)
+
+        self.slider.draw(win, 100, 400)
 
         pygame.display.flip()
-
-    def start_snake_thread(self):
-        if self.snake_thread and self.snake_thread.is_alive():
-            return
-        self.snake_thread = threading.Thread(target=self.snake.run)
-        self.snake_thread.start()
 
 
 def do_nothing():
@@ -117,5 +106,5 @@ class Snake:
 
 if __name__ == '__main__':
     pygame.init()
-    Main().run()
+    Demo().run()
     pygame.quit()

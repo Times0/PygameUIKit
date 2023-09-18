@@ -35,6 +35,6 @@ class Group:
         for obj in self.objects:
             obj.draw(screen, x, y)
 
-    def handle_events(self, events):
+    def handle_event(self, event):
         for obj in self.objects:
-            obj.handle_events(events)
+            obj.handle_event(event)
