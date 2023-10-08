@@ -15,11 +15,12 @@ class InputBox(EasyObject):
                  font: pg.font.Font = FONT,
                  fixed_width: int = None,
                  text_color=pg.Color('white'),
-                 border_radius=0):
+                 border_radius=0,
+                 ui_group=None):
         """
         if width is None, then the width will be the width of the text
         """
-        super().__init__()
+        super().__init__(ui_group=ui_group)
         self.color = COLOR_INACTIVE
         self.text_color = text_color
         self.text = text
@@ -58,9 +59,11 @@ class InputBox(EasyObject):
             return
         if event.type == pg.KEYDOWN:
             if event.key == pg.K_BACKSPACE:
-                pass
+                self.last_backspace = pg.time.get_ticks()
+                self.text = self.text[:-1]
             elif event.key == pg.K_RETURN:
-                pass
+                self.active = False
+                self.color = COLOR_INACTIVE
             else:
                 self.text += event.unicode
         if event.type == pg.KEYUP and event.key == pg.K_BACKSPACE:

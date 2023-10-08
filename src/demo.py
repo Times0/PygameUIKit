@@ -1,9 +1,10 @@
+import os
+
 import pygame
 from pygame import Color
 
-from src.PygameUIKit import Group
-from src.PygameUIKit import text_input, button
-from src.PygameUIKit import Slider
+from PygameUIKit import Group
+from PygameUIKit import text_input, button, slider
 
 #
 #
@@ -15,8 +16,9 @@ RED = (255, 0, 0)
 BTN_GREEN = (0, 169, 0)
 BTN_BLUE = (83, 131, 232)
 
-img_play = pygame.image.load("src/assets/play.png")
-img_stop = pygame.image.load("src/assets/stop.png")
+cwd = os.path.dirname(__file__)
+img_play = pygame.image.load(os.path.join(cwd, "assets/play.png"))
+img_stop = pygame.image.load(os.path.join(cwd, "assets/stop.png"))
 
 
 class Demo:
@@ -26,11 +28,11 @@ class Demo:
         self.clock = pygame.time.Clock()
 
         self.easy_objects = Group()
-        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2)
+        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2, ui_group=self.easy_objects)
         self.btn_pause = button.ButtonTwoStates(img_play, img_stop, do_nothing, ui_group=self.easy_objects)
         self.btn_png = button.ButtonPngIcon(img_play, hello_world, inflate=10, ui_group=self.easy_objects)
 
-        self.slider = Slider(0, 100, 1, ui_group=self.easy_objects)
+        self.slider = slider.Slider(0, 100, 1, ui_group=self.easy_objects)
         self.easy_objects.add(self.text_input)
 
     def run(self):

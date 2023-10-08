@@ -2,7 +2,9 @@ import pygame as pg
 
 
 class EasyObject:
-    def __init__(self):
+    def __init__(self, *, ui_group=None):
+        if ui_group:
+            ui_group.add(self)
         self.x = 0
         self.y = 0
         self.w = 0
