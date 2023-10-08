@@ -99,7 +99,7 @@ Do not hesitate to contribute to the project, it is open to everyone.
 
 ## Contact
 
-dorian.programming@gmail.com
+times.coding@gmail.com
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
