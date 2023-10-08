@@ -154,8 +154,6 @@ class ButtonPngIcon(ButtonImage):
         screen.blit(self.image, self.rect)
 
 
-
-
 class ButtonThreadImage(ButtonImage):
     def __init__(self, image_idle, image_working, image_hover, img_success, onclick_f):
         super().__init__(image_idle, onclick_f)
@@ -228,6 +226,19 @@ class ButtonText(ButtonRect):
         h = self.text_surface.get_height() + 20
         super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group,
                          outline_color=outline_color)
+
+    def render(self):
+        self.text_surface = self.font.render(self.text, True, self.text_color)
+        self.text_rect = self.text_surface.get_rect()
+        self.rect = self.text_rect.inflate(20, 20)
+        super().render()
+
+    def change_text(self, new_text):
+        if new_text == self.text:
+            return
+
+        self.text = new_text
+        self.render()
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
