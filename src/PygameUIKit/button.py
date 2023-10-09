@@ -11,13 +11,11 @@ FONT = pg.font.Font(None, 25)
 
 class EasyButton(EasyObject):
     def __init__(self, onclick_f, ui_group: Group = None):
-        super().__init__()
+        super().__init__(ui_group=ui_group)
         self.is_hover = False
         self.clicked = False
         self.onclick_f = onclick_f
         self.ui_group = ui_group
-        if self.ui_group:
-            self.ui_group.add(self)
 
     def is_mouse_on_button(self, pos):
         return self.rect.collidepoint(pos)
