@@ -23,7 +23,7 @@ jobs:
 
     - name: Build and Publish to PyPI
       run: |
-        python setup.py sdist bdist_wheel
+        python -m build
         python -m twine upload --skip-existing --verbose --repository pypi dist/*
       env:
         TWINE_USERNAME: __token__
