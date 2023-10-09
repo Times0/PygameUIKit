@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r requirements.txt 
-        py -m pip install --upgrade build twine
+        python -m pip install --upgrade build twine
 
     - name: Build and Publish to PyPI
       run: |
