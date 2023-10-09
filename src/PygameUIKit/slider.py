@@ -1,6 +1,5 @@
 import pygame
 
-
 class Slider:
     def __init__(self, min, max, step, ui_group=None):
         self.ui_group = ui_group

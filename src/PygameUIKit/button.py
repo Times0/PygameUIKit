@@ -2,7 +2,7 @@ import pygame as pg
 from pygame import Rect
 from pygame.color import Color
 
-from src.PygameUIKit.super_object import Group, EasyObject
+from PygameUIKit.super_object import Group, EasyObject
 from . import utilis
 
 pg.font.init()
