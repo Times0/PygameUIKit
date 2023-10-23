@@ -33,7 +33,6 @@ class Demo:
         self.btn_png = button.ButtonPngIcon(img_play, hello_world, inflate=10, ui_group=self.easy_objects)
 
         self.slider = slider.Slider(0, 100, 1, ui_group=self.easy_objects)
-        self.easy_objects.add(self.text_input)
 
     def run(self):
         while not self.done:
@@ -48,13 +47,14 @@ class Demo:
             if event.type == pygame.QUIT:
                 self.done = True
 
+        self.text_input.handle_events(events)
+
     def draw(self, win):
         W, H = self.screen.get_size()
         win.fill(Color(224, 224, 224))
         self.text_input.draw(win, W // 2 - self.text_input.rect.w // 2, H - 200)
         self.btn_pause.draw(win, 100, 200)
         self.btn_png.draw(win, 100, 300)
-
         self.slider.draw(win, 100, 400)
 
         pygame.display.flip()

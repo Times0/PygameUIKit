@@ -1,3 +1,5 @@
+import os
+
 import pygame as pg
 
 from .super_object import EasyObject
@@ -5,7 +7,14 @@ from .super_object import EasyObject
 pg.font.init()
 COLOR_INACTIVE = pg.Color('lightskyblue3')
 COLOR_ACTIVE = pg.Color('dodgerblue2')
-FONT = pg.font.Font(None, 25)
+cwd = os.path.dirname(__file__)
+FONT = pg.font.Font(cwd + "/../assets/OpenSans-Medium.ttf", 16)
+
+TIME_OUT_BACKSPACE = 100
+
+
+def is_char(unicode):
+    return unicode.isalpha() or unicode.isdigit() or unicode == ' '
 
 
 class InputBox(EasyObject):
@@ -14,7 +23,7 @@ class InputBox(EasyObject):
                  text="",
                  font: pg.font.Font = FONT,
                  fixed_width: int = None,
-                 text_color=pg.Color('white'),
+                 text_color=pg.Color('black'),
                  border_radius=0,
                  ui_group=None):
         """
@@ -24,10 +33,12 @@ class InputBox(EasyObject):
         self.color = COLOR_INACTIVE
         self.text_color = text_color
         self.text = text
+        self.cursor = 0
         self.active = False
         self.font = font
         self.max_width = fixed_width
         self.border_radius = border_radius
+        self.last_backspace = 0
 
         if fixed_width:
             self.rect = pg.Rect(0, 0, fixed_width, 20, )  # width is fixed
@@ -38,12 +49,11 @@ class InputBox(EasyObject):
         fake_render = self.font.render("A", True, self.text_color)
         self.rect.h = fake_render.get_height() + 10
 
-        self.last_backspace = 0
         self.bg_trans = 0
         self.hover = False
         self._render()
 
-    def handle_event(self, event):
+    def _handle_event(self, event):
         if event.type == pg.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
                 self.active = True
@@ -54,20 +64,38 @@ class InputBox(EasyObject):
         if event.type == pg.MOUSEMOTION:
             self.hover = self.rect.collidepoint(event.pos)
 
-        # needs to be active to do the following
         if not self.active:
             return
         if event.type == pg.KEYDOWN:
-            if event.key == pg.K_BACKSPACE:
-                self.last_backspace = pg.time.get_ticks()
-                self.text = self.text[:-1]
-            elif event.key == pg.K_RETURN:
+            if event.key == pg.K_RETURN:
                 self.active = False
                 self.color = COLOR_INACTIVE
-            else:
-                self.text += event.unicode
-        if event.type == pg.KEYUP and event.key == pg.K_BACKSPACE:
-            self.last_backspace = 0
+
+            elif event.key == pg.K_LEFT:
+                if self.cursor > 0:
+                    self.cursor -= 1
+            elif event.key == pg.K_RIGHT:
+                if self.cursor < len(self.text):
+                    self.cursor += 1
+            elif is_char(event.unicode):
+                self.text = self.text[:self.cursor] + event.unicode + self.text[self.cursor:]
+                self.cursor += 1
+            self._render()
+
+    def handle_event(self, event):
+        pass
+
+    def handle_events(self, events):
+        for event in events:
+            self._handle_event(event)
+        pressed = pg.key.get_pressed()
+        if pressed[pg.K_BACKSPACE]:
+            if self.cursor > 0:
+                if pg.time.get_ticks() - self.last_backspace > TIME_OUT_BACKSPACE:
+                    self.text = self.text[:self.cursor - 1] + self.text[self.cursor:]
+                    self.cursor -= 1
+                    self.last_backspace = pg.time.get_ticks()
+                    self._render()
 
     def _render(self):
         self.txt_surface = self.font.render(self.text, True, self.text_color)
@@ -95,7 +123,9 @@ class InputBox(EasyObject):
         if self.active:
             cursor = pg.surface.Surface((1, self.rect.h - 10))
             cursor.fill(self.text_color)
-            rect_img.blit(cursor, (self.txt_surface.get_width() + 5, 5))
+            cursor_pos = self.font.render(self.text[:self.cursor], True, self.text_color).get_width()
+
+            rect_img.blit(cursor, (cursor_pos + 5, 5))
 
         screen.blit(rect_img, (self.rect.x, self.rect.y))
 
