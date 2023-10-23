@@ -10,15 +10,15 @@ COLOR_ACTIVE = pg.Color('dodgerblue2')
 cwd = os.path.dirname(__file__)
 FONT = pg.font.Font(cwd + "/../assets/OpenSans-Medium.ttf", 16)
 
-TIME_OUT_BACKSPACE = 100
+TIME_OUT_FIRST_BACKSPACE = 500
+TIME_OUT_BACKSPACE = 20
 
 
 def is_char(unicode):
-    return unicode.isalpha() or unicode.isdigit() or unicode == ' '
+    return unicode.isalpha() or unicode.isdigit() or unicode in " .,:;?!@#$%^&*()_-+=~`[]{}\\|/<>"
 
 
 class InputBox(EasyObject):
-
     def __init__(self, *,
                  text="",
                  font: pg.font.Font = FONT,
@@ -38,7 +38,9 @@ class InputBox(EasyObject):
         self.font = font
         self.max_width = fixed_width
         self.border_radius = border_radius
-        self.last_backspace = 0
+
+        self.last_key_press = 0
+        self.time_since_first_key = 0
 
         if fixed_width:
             self.rect = pg.Rect(0, 0, fixed_width, 20, )  # width is fixed
@@ -70,7 +72,9 @@ class InputBox(EasyObject):
             if event.key == pg.K_RETURN:
                 self.active = False
                 self.color = COLOR_INACTIVE
-
+            elif event.key == pg.K_BACKSPACE:
+                self.time_since_first_key = pg.time.get_ticks()
+                self.remove_letter()
             elif event.key == pg.K_LEFT:
                 if self.cursor > 0:
                     self.cursor -= 1
@@ -78,9 +82,13 @@ class InputBox(EasyObject):
                 if self.cursor < len(self.text):
                     self.cursor += 1
             elif is_char(event.unicode):
-                self.text = self.text[:self.cursor] + event.unicode + self.text[self.cursor:]
-                self.cursor += 1
+                self.add_letter(event.unicode)
+                self.time_since_first_key = pg.time.get_ticks()
             self._render()
+
+    def add_letter(self, unicode):
+        self.text = self.text[:self.cursor] + unicode + self.text[self.cursor:]
+        self.cursor += 1
 
     def handle_event(self, event):
         pass
@@ -89,13 +97,17 @@ class InputBox(EasyObject):
         for event in events:
             self._handle_event(event)
         pressed = pg.key.get_pressed()
-        if pressed[pg.K_BACKSPACE]:
+        if pressed[pg.K_BACKSPACE] and pg.time.get_ticks() - self.time_since_first_key > TIME_OUT_FIRST_BACKSPACE:
             if self.cursor > 0:
-                if pg.time.get_ticks() - self.last_backspace > TIME_OUT_BACKSPACE:
-                    self.text = self.text[:self.cursor - 1] + self.text[self.cursor:]
-                    self.cursor -= 1
-                    self.last_backspace = pg.time.get_ticks()
-                    self._render()
+                if pg.time.get_ticks() - self.last_key_press > TIME_OUT_BACKSPACE:
+                    self.remove_letter()
+        # check for other keys
+
+    def remove_letter(self):
+        self.text = self.text[:self.cursor - 1] + self.text[self.cursor:]
+        self.cursor -= 1
+        self.last_key_press = pg.time.get_ticks()
+        self._render()
 
     def _render(self):
         self.txt_surface = self.font.render(self.text, True, self.text_color)
