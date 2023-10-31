@@ -199,13 +199,14 @@ class ButtonThreadImage(ButtonImage):
 
 class ButtonText(ButtonRect):
     def __init__(self,
-                 text,
-                 onclick_f,
-                 rect_color,
+                 text="",
+                 onclick_f=None,
+                 rect_color=Color("black"),
                  font=FONT,
                  border_radius=0,
                  font_color=None,
                  outline_color=None,
+                 fixed_width=None,
                  ui_group=None):
         self.text = text
         if font_color is None:
@@ -218,13 +219,20 @@ class ButtonText(ButtonRect):
 
         w = self.text_surface.get_width() + 20
         h = self.text_surface.get_height() + 20
+
+        if fixed_width:
+            w = fixed_width
+            self.fixed_width = w
         super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group,
                          outline_color=outline_color)
 
     def render(self):
         self.text_surface = self.font.render(self.text, True, self.text_color)
         self.text_rect = self.text_surface.get_rect()
-        self.rect = self.text_rect.inflate(20, 20)
+        if self.fixed_width:
+            self.rect.w = self.fixed_width
+        else:
+            self.rect = self.text_surface.get_rect().inflate(20, 20)
         super().render()
 
     def change_text(self, new_text):

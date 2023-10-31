@@ -4,7 +4,7 @@ import pygame
 from pygame import Color
 
 from PygameUIKit import Group
-from PygameUIKit import text_input, button, slider
+from PygameUIKit import text_input, button, slider, dropdown
 
 #
 #
@@ -33,6 +33,11 @@ class Demo:
         self.btn_png = button.ButtonPngIcon(img_play, hello_world, inflate=10, ui_group=self.easy_objects)
 
         self.slider = slider.Slider(0, 100, 1, ui_group=self.easy_objects)
+        self.dropdown = dropdown.ComboBox(["Hello", "World", "And", "You"], ui_group=self.easy_objects)
+
+        for i in range(4):
+            # Set input text to the button text
+            self.dropdown.add_action(i, lambda i=i: self.text_input.set_text(self.dropdown.elements[i]))
 
     def run(self):
         while not self.done:
@@ -56,6 +61,7 @@ class Demo:
         self.btn_pause.draw(win, 100, 200)
         self.btn_png.draw(win, 100, 300)
         self.slider.draw(win, 100, 400)
+        self.dropdown.draw(win, 100, 100)
 
         pygame.display.flip()
 
@@ -66,45 +72,6 @@ def do_nothing():
 
 def hello_world():
     print("Hello World!")
-
-
-class Snake:
-    def __init__(self, n, m):
-        self.body = [(0, 0), (0, 1), (0, 2)]
-        self.n, self.m = n, m
-
-    def draw(self, win: pygame.Surface):
-        W, H = win.get_size()
-        size_vertical = H / self.n
-        size_horizontal = W / self.m
-        for i, j in self.body:
-            x = j * size_horizontal
-            y = i * size_vertical
-            pygame.draw.rect(win, RED, (x, y, size_horizontal - 2, size_vertical - 2))
-
-    def move(self, direction):
-        if direction == "up":
-            self.body.insert(0, (self.body[0][0] - 1, self.body[0][1]))
-        elif direction == "down":
-            self.body.insert(0, (self.body[0][0] + 1, self.body[0][1]))
-        elif direction == "left":
-            self.body.insert(0, (self.body[0][0], self.body[0][1] - 1))
-        elif direction == "right":
-            self.body.insert(0, (self.body[0][0], self.body[0][1] + 1))
-        self.body.pop()
-
-    def run(self):
-        time_interval = 100
-        instructions = ["down"] * (self.n - 1) + ["right"] * (self.m - 1) + ["up"] * (self.n - 1) + ["left"] * (
-                self.m - 1)
-        timer = 0
-        clock = pygame.time.Clock()
-        index_last_played = 0
-        while timer < (len(instructions)) * time_interval:
-            timer += clock.tick(60)
-            if timer // time_interval > index_last_played:
-                self.move(instructions[index_last_played])
-                index_last_played = timer // time_interval
 
 
 if __name__ == '__main__':

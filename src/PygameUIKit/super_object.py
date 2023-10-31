@@ -1,4 +1,5 @@
 import pygame as pg
+from pygame import Color
 
 
 class EasyObject:
@@ -20,6 +21,10 @@ class EasyObject:
         self.x = x
         self.y = y
 
+    def draw(self, screen, x, y):
+        self.rect.x = x
+        self.rect.y = y
+
 
 class Group:
     def __init__(self, *objects):
@@ -40,3 +45,10 @@ class Group:
     def handle_event(self, event):
         for obj in self.objects:
             obj.handle_event(event)
+
+
+class ObjectWithText(EasyObject):
+    def __init__(self, fontsize, ui_group=None):
+        super().__init__(ui_group=ui_group)
+        self.font = pg.font.SysFont("Arial", fontsize)
+        self.color = Color("white")
