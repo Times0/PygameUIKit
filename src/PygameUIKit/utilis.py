@@ -21,7 +21,7 @@ def make_surface_darker(surface: pg.Surface, amount: int = 50) -> pg.Surface:
     return new_surface
 
 
-def draw_transparent_rect_with_border_radius(screen, rect, border_radius, color, alpha):
+def draw_transparent_rect_with_border_radius(screen,color, rect, border_radius, alpha):
     surf = pg.Surface(rect.size, pg.SRCALPHA)
     pg.draw.rect(surf, color, surf.get_rect().inflate(-1, -1), border_radius=border_radius)
     surf.set_alpha(alpha)

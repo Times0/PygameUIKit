@@ -142,8 +142,11 @@ class ButtonPngIcon(ButtonImage):
 
         # if hover then blit a transparent rect behind the image
         if self.is_hover or self.clicked:
-            utilis.draw_transparent_rect_with_border_radius(screen, self.rect.inflate(self.inflate, self.inflate),
-                                                            10, self.hover_color, self.opacity)
+            utilis.draw_transparent_rect_with_border_radius(screen,
+                                                            self.hover_color,
+                                                            self.rect.inflate(self.inflate, self.inflate),
+                                                            10,
+                                                            self.opacity)
 
         screen.blit(self.image, self.rect)
 
@@ -210,11 +213,11 @@ class ButtonText(ButtonRect):
                  ui_group=None):
         self.text = text
         if font_color is None:
-            self.text_color = utilis.get_best_text_color(rect_color)
+            self.font_color = utilis.get_best_text_color(rect_color)
         else:
-            self.text_color = font_color
+            self.font_color = font_color
         self.font = font
-        self.text_surface = self.font.render(self.text, True, self.text_color)
+        self.text_surface = self.font.render(self.text, True, self.font_color)
         self.text_rect = self.text_surface.get_rect()
 
         w = self.text_surface.get_width() + 20
@@ -223,11 +226,13 @@ class ButtonText(ButtonRect):
         if fixed_width:
             w = fixed_width
             self.fixed_width = w
+        else:
+            self.fixed_width = None
         super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group,
                          outline_color=outline_color)
 
     def render(self):
-        self.text_surface = self.font.render(self.text, True, self.text_color)
+        self.text_surface = self.font.render(self.text, True, self.font_color)
         self.text_rect = self.text_surface.get_rect()
         if self.fixed_width:
             self.rect.w = self.fixed_width

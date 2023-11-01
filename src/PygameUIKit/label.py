@@ -3,12 +3,11 @@ import pygame as pg
 from .super_object import EasyObject
 
 pg.font.init()
-FONT = pg.font.Font(None, 25)
 
 
 class Label(EasyObject):
-    def __init__(self, text, font_color, font=FONT):
-        super().__init__()
+    def __init__(self, text, font_color, font=None):
+        super().__init__(font=font)
         self.text = text
         self.font_color = font_color
         self.font = font
