@@ -7,9 +7,7 @@ from .super_object import EasyObject
 pg.font.init()
 COLOR_INACTIVE = pg.Color('lightskyblue3')
 COLOR_ACTIVE = pg.Color('dodgerblue2')
-cwd = os.path.dirname(__file__)
-FONT = pg.font.Font(cwd + "/assets/OpenSans-Medium.ttf", 16)
-
+FONT = pg.font.SysFont('Arial', 20)
 TIME_OUT_FIRST = 500
 TIME_OUT = 40
 
