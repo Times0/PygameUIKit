@@ -5,7 +5,7 @@ from pygame import Color
 import pygame as pg
 
 from .button import ButtonText
-from .utilis import draw_transparent_rect_with_border_radius
+from .utilis import draw_transparent_rect_with_border_radius, best_contrast_color
 
 PADDING = 10
 
@@ -20,19 +20,26 @@ img_arrow_up = pg.transform.rotate(img_arrow_up, 180)
 class ComboBox(ButtonText):
     def __init__(self, elements: list[str], ui_group=None, font_color=Color("black")):
         super().__init__(ui_group=ui_group, text=elements[0], onclick_f=self.open, border_radius=5, fixed_width=200,
-                         font_color=font_color)
+                         font_color=best_contrast_color(font_color))
+        self.text = elements[0]
         self.rect.height = self.text_rect.height + PADDING * 2
         self.elements = elements
-        self.selected = 0
-        self.hovered = self.selected
+        self.selected_index = 0
+        self.hovered_index = self.selected_index
         self.is_open = False
         self._rendered_elements: list[pg.Surface] = []
         self.actions: dict[int, callable] = {}
         self._render_elements()
 
     def _render_elements(self):
-        for element in self.elements:
-            text = self.font.render(element, True, self.font_color)
+        self._rendered_elements.clear()
+        for i, element in enumerate(self.elements):
+            if self.selected_index == i or self.hovered_index == i:
+                print(f"rendering {i} with selected color ({self.bg_color}")
+                color = self.bg_color
+            else:
+                color = best_contrast_color(self.bg_color)
+            text = self.font.render(element, True, color)
             self._rendered_elements.append(text)
             self.rect.width = max(self.rect.width, text.get_width() + PADDING * 2)
 
@@ -48,15 +55,15 @@ class ComboBox(ButtonText):
                                                      Color("black"),
                                                      pg.Rect(x, y + self.rect.h, self.rect.w, height),
                                                      5,
-                                                     100)
+                                                     200)
             for i in range(len(self.elements)):
-                if i == self.hovered or i == self.selected:
+                if i == self.hovered_index or i == self.selected_index:
                     draw_transparent_rect_with_border_radius(screen,
                                                              Color("white"),
                                                              pg.Rect(x, y + self.rect.h * (i + 1), self.rect.w,
                                                                      self.rect.h).inflate(-3, -3),
-                                                             5,
-                                                              100)
+                                                             border_radius=5, alpha=100)
+
                 screen.blit(self._rendered_elements[i], (x + PADDING, y + PADDING + self.rect.h * (i + 1)))
 
     def handle_event(self, event):
@@ -66,8 +73,7 @@ class ComboBox(ButtonText):
             if self.is_open:
                 if self.rect.x < x < self.rect.x + self.rect.w:
                     if self.rect.y + self.rect.h < y < self.rect.y + self.rect.h * (len(self.elements) + 1):
-                        self.new_selection((y - self.rect.y - self.rect.h) // self.rect.h)
-
+                        self.change_selected((y - self.rect.y - self.rect.h) // self.rect.h)
             if not self.rect.colliderect(pg.Rect(x, y, 1, 1)):  # Clicked outside the combo box button
                 self.is_open = False
         if event.type == pg.MOUSEMOTION:
@@ -76,19 +82,27 @@ class ComboBox(ButtonText):
                 x, y = mouse_pos
                 if self.rect.x < x < self.rect.x + self.rect.w:
                     if self.rect.y + self.rect.h < y < self.rect.y + self.rect.h * (len(self.elements) + 1):
-                        self.hovered = (y - self.rect.y - self.rect.h) // self.rect.h
+                        self.change_hovered((y - self.rect.y - self.rect.h) // self.rect.h)
 
-    def new_selection(self, index):
-        self.selected = index
-        self.change_text(self.elements[self.selected])
+    def change_selected(self, index):
+        self.selected_index = index
+        self.change_text(self.elements[self.selected_index])
         if index in self.actions:
             self.actions[index]()
+        self.text = self.elements[self.selected_index]
+
 
     def open(self):
-        self.is_open = True
+        self.is_open = not self.is_open
+        self._render_elements()
 
     def add_action(self, index, action):
         self.actions[index] = action
 
     def get_value(self) -> str:
-        return self.elements[self.selected]
+        return self.elements[self.selected_index]
+
+    def change_hovered(self, i):
+        if i != self.hovered_index:
+            self.hovered_index = i
+            self._render_elements()

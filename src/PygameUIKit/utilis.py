@@ -28,7 +28,7 @@ def draw_transparent_rect_with_border_radius(screen,color, rect, border_radius, 
     screen.blit(surf, rect)
 
 
-def get_best_text_color(rgb_color: Union[Color, tuple]):
+def best_contrast_color(rgb_color: Union[Color, tuple]):
     if isinstance(rgb_color, Color):
         rgb_color = rgb_color.r, rgb_color.g, rgb_color.b
     r, g, b = rgb_color

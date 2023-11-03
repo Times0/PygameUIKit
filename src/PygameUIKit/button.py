@@ -64,7 +64,7 @@ class EasyButton(EasyObject):
 class ButtonRect(EasyButton):
     def __init__(self, w, h, color, onclick_f, outline_color=None, border_radius=0, ui_group=None):
         super().__init__(onclick_f, ui_group)
-        self.color = color
+        self.bg_color = color
         self.border_radius = border_radius
         self.rect = pg.Rect(0, 0, w, h)
         self.surface = None
@@ -75,7 +75,7 @@ class ButtonRect(EasyButton):
 
     def render(self):
         self.surface = pg.surface.Surface((self.rect.w, self.rect.h), pg.SRCALPHA)
-        pg.draw.rect(self.surface, self.color, self.surface.get_rect(), border_radius=self.border_radius, width=0)
+        pg.draw.rect(self.surface, self.bg_color, self.surface.get_rect(), border_radius=self.border_radius, width=0)
         if self.outline_color:
             pg.draw.rect(self.surface, self.outline_color, self.surface.get_rect(), border_radius=self.border_radius,
                          width=2)
@@ -213,7 +213,7 @@ class ButtonText(ButtonRect):
                  ui_group=None):
         self.text = text
         if font_color is None:
-            self.font_color = utilis.get_best_text_color(rect_color)
+            self.font_color = utilis.best_contrast_color(rect_color)
         else:
             self.font_color = font_color
         self.font = font

@@ -4,8 +4,8 @@ import random
 import pygame
 from pygame import Color
 
-from PygameUIKit import Group
-from PygameUIKit import text_input, button, slider, dropdown
+from src.PygameUIKit import Group
+from src.PygameUIKit import text_input, button, slider, dropdown
 from src.PygameUIKit.barchart import BarChart
 
 #
@@ -34,11 +34,13 @@ class Demo:
         self.btn_pause = button.ButtonTwoStates(img_play, img_stop, do_nothing, ui_group=self.easy_objects)
         self.btn_png = button.ButtonPngIcon(img_play, self.change_values, inflate=10, ui_group=self.easy_objects)
 
-        self.slider = slider.Slider(0, 100, 1, ui_group=self.easy_objects)
+        self.slider = slider.Slider(0, 100, 1, show_value=True, ui_group=self.easy_objects)
+        self.slider.connect(self.change_values)
+
         self.dropdown = dropdown.ComboBox(["Hello", "World", "And", "You"], ui_group=self.easy_objects)
 
         data = [10, 20, 30, 40, 50]
-        self.chart = BarChart(data, ui_group=self.easy_objects,max_value=100)
+        self.chart = BarChart(data, ui_group=self.easy_objects, max_value=100)
 
         for i in range(4):
             self.dropdown.add_action(i, lambda i=i: self.text_input.set_text(self.dropdown.elements[i]))
@@ -70,9 +72,9 @@ class Demo:
         self.text_input.draw(win, W // 2 - self.text_input.rect.w // 2, H - 200)
         self.btn_pause.draw(win, 100, 200)
         self.btn_png.draw(win, 100, 300)
-        self.slider.draw(win, 100, 400)
-        self.dropdown.draw(win, 100, 100)
+        self.slider.draw(win, 100, 400, 300, 5)
         self.chart.draw(win, 159, 164, 300, 100)
+        self.dropdown.draw(win, 100, 100)
         pygame.display.flip()
 
     def change_values(self):
