@@ -1,3 +1,5 @@
+from enum import Enum
+
 import pygame as pg
 from pygame import Rect
 from pygame.color import Color
@@ -59,6 +61,10 @@ class EasyButton(EasyObject):
     def _on_click(self):
         pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
         self.onclick_f()
+
+    def connect(self, func, when="on_click"):
+        if when == "on_click":
+            self.onclick_f = func
 
 
 class ButtonRect(EasyButton):
@@ -200,6 +206,12 @@ class ButtonThreadImage(ButtonImage):
         self.isSucces = True
 
 
+class TextAlignment(Enum):
+    LEFT = 1
+    RIGHT = 2
+    CENTER = 3
+
+
 class ButtonText(ButtonRect):
     def __init__(self,
                  text="",
@@ -210,7 +222,9 @@ class ButtonText(ButtonRect):
                  font_color=None,
                  outline_color=None,
                  fixed_width=None,
+                 text_align=TextAlignment.LEFT,
                  ui_group=None):
+        self.text_align = text_align
         self.text = text
         if font_color is None:
             self.font_color = utilis.best_contrast_color(rect_color)
@@ -249,7 +263,12 @@ class ButtonText(ButtonRect):
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
-        screen.blit(self.text_surface, (x + 10, y + 10))
+        if self.text_align == TextAlignment.LEFT:
+            screen.blit(self.text_surface, (x + 10, y + 10))
+        elif self.text_align == TextAlignment.RIGHT:
+            screen.blit(self.text_surface, (x + self.rect.w - self.text_surface.get_width() - 10, y + 10))
+        elif self.text_align == TextAlignment.CENTER:
+            screen.blit(self.text_surface, (x + self.rect.w // 2 - self.text_surface.get_width() // 2, y + 10))
 
 
 class ButtonThreadText(ButtonRect):
