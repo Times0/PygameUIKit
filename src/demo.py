@@ -34,6 +34,8 @@ class Demo:
         self.btn_pause = button.ButtonTwoStates(img_play, img_stop, do_nothing, ui_group=self.easy_objects)
         self.btn_png = button.ButtonPngIcon(img_play, self.change_values, inflate=10, ui_group=self.easy_objects)
 
+        self.btn_pause.connect(self.toggle_dance)
+
         self.slider = slider.Slider(0, 100, 1, show_value=True, ui_group=self.easy_objects)
         self.slider.connect(self.change_values)
 
@@ -44,6 +46,8 @@ class Demo:
 
         for i in range(4):
             self.dropdown.add_action(i, lambda i=i: self.text_input.set_text(self.dropdown.elements[i]))
+
+        self.dancing = False
 
     def run(self):
         while not self.done:
@@ -65,7 +69,8 @@ class Demo:
 
     def update(self, dt):
         self.easy_objects.update(dt)
-
+        if self.dancing:
+            self.change_values()
     def draw(self, win):
         W, H = self.screen.get_size()
         win.fill(Color(224, 224, 224))
@@ -80,8 +85,10 @@ class Demo:
     def change_values(self):
         i = random.randint(0, len(self.chart.values) - 1)
         new_value = random.randint(0, 100)
-        print(f"changing {i} to {new_value}")
         self.chart.change_value(i, new_value)
+
+    def toggle_dance(self):
+        self.dancing = not self.dancing
 
 
 def do_nothing():

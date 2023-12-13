@@ -16,6 +16,8 @@ class EasyObject:
         self.h = 0
         self.rect = pg.Rect(self.x, self.y, self.w, self.h)
 
+        self.hovered = False
+
     def update_pos(self, x, y):
         """ This is used when an object is on a surface. Its position relative to the surface might be (0,0)
         but its position relative to the screen is not. This function updates the position of the object

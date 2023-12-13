@@ -29,4 +29,4 @@ jobs:
         python -m twine upload --skip-existing --verbose --repository pypi dist/*
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}  # Set this secret in your repository settings
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
