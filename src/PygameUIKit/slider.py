@@ -11,7 +11,8 @@ COLOR_CIRCLE2 = COLOR_IN_PROGRESS
 
 
 class Slider(EasyObject):
-    def __init__(self, min, max, step, show_value=False, font_color=Color("black"), ui_group=None):
+    def __init__(self, min, max, step, show_value=False, font=pygame.font.SysFont("Arial", 15, bold=True),
+                 font_color=Color("black"), ui_group=None):
         super().__init__(ui_group=ui_group)
         self.min = min
         self.max = max
@@ -22,6 +23,7 @@ class Slider(EasyObject):
         self.circle_radius = 10
         self.rect = pygame.Rect(0, 0, 100, self.circle_radius / 2)
         self.dragging = False
+        self.font = font
         self.font_color = font_color
 
         self.on_change = lambda: None

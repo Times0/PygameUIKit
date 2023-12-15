@@ -30,19 +30,19 @@ class Demo:
         self.clock = pygame.time.Clock()
 
         self.easy_objects = Group()
-        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2, ui_group=self.easy_objects)
+        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2, ui_group=self.easy_objects,font=def_font)
         self.btn_pause = button.ButtonTwoStates(img_play, img_stop, do_nothing, ui_group=self.easy_objects)
         self.btn_png = button.ButtonPngIcon(img_play, self.change_values, inflate=10, ui_group=self.easy_objects)
 
         self.btn_pause.connect(self.toggle_dance)
 
-        self.slider = slider.Slider(0, 100, 1, show_value=True, ui_group=self.easy_objects)
+        self.slider = slider.Slider(0, 100, 1, show_value=True, ui_group=self.easy_objects,font=def_font)
         self.slider.connect(self.change_values)
 
-        self.dropdown = dropdown.ComboBox(["Hello", "World", "And", "You"], ui_group=self.easy_objects)
+        self.dropdown = dropdown.ComboBox(["Hello", "World", "And", "You"], ui_group=self.easy_objects,font=def_font)
 
         data = [10, 20, 30, 40, 50]
-        self.chart = BarChart(data, ui_group=self.easy_objects, max_value=100)
+        self.chart = BarChart(data, ui_group=self.easy_objects, max_value=100,font=def_font)
 
         for i in range(4):
             self.dropdown.add_action(i, lambda i=i: self.text_input.set_text(self.dropdown.elements[i]))
@@ -97,5 +97,7 @@ def do_nothing():
 
 if __name__ == '__main__':
     pygame.init()
+    def_font = pygame.font.SysFont("Arial", 20)
+
     Demo().run()
     pygame.quit()

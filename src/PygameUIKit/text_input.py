@@ -7,7 +7,6 @@ from .super_object import EasyObject
 pg.font.init()
 COLOR_INACTIVE = pg.Color('lightskyblue3')
 COLOR_ACTIVE = pg.Color('dodgerblue2')
-FONT = pg.font.SysFont('Arial', 20)
 TIME_OUT_FIRST = 500
 TIME_OUT = 40
 
@@ -19,7 +18,7 @@ def is_char(unicode):
 class InputBox(EasyObject):
     def __init__(self, *,
                  text="",
-                 font: pg.font.Font = FONT,
+                 font: pg.font.Font = None,
                  fixed_width: int = None,
                  text_color=pg.Color('black'),
                  border_radius=0,

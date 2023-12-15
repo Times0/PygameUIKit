@@ -1,6 +1,4 @@
 import os
-
-import pygame.draw
 from pygame import Color
 import pygame as pg
 
@@ -18,8 +16,9 @@ img_arrow_up = pg.transform.rotate(img_arrow_up, 180)
 
 
 class ComboBox(ButtonText):
-    def __init__(self, elements: list[str], ui_group=None, font_color=Color("black")):
-        super().__init__(ui_group=ui_group, text=elements[0], onclick_f=self.open, border_radius=5, fixed_width=200,
+    def __init__(self, elements: list[str], ui_group=None, font=None, font_color=Color("black")):
+        super().__init__(ui_group=ui_group, text=elements[0],
+                         onclick_f=self.open, border_radius=5, fixed_width=200, font=font,
                          font_color=best_contrast_color(font_color))
         self.text = elements[0]
         self.rect.height = self.text_rect.height + PADDING * 2
@@ -90,7 +89,6 @@ class ComboBox(ButtonText):
         if index in self.actions:
             self.actions[index]()
         self.text = self.elements[self.selected_index]
-
 
     def open(self):
         self.is_open = not self.is_open

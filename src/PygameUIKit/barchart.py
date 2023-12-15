@@ -21,6 +21,7 @@ class BarChart(EasyObject):
                  labels: list[str] = None,
                  max_value=None,
                  ui_group=None,
+                 font=pg.font.SysFont("Arial", 15),
                  labels_color=pg.Color("black")):
         super().__init__(ui_group=ui_group)
         self.values = values[:]
@@ -30,7 +31,7 @@ class BarChart(EasyObject):
         self.labels = labels
         self.values_displayed = self.values[:]
 
-
+        self.font = font
         self.colors = sns.color_palette("husl", len(self.values))
         self.colors = color_from_float(self.colors)
 

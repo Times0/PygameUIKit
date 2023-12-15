@@ -8,7 +8,10 @@ from PygameUIKit.super_object import Group, EasyObject
 from . import utilis
 
 pg.font.init()
-FONT = pg.font.Font(None, 25)
+
+
+# Instanciating a default font here leads to a low level pygame error when restarting an app with a font instanciated in
+# the previous run
 
 
 class EasyButton(EasyObject):
@@ -120,7 +123,8 @@ class ButtonImage(EasyButton):
 
 
 class ButtonImageText(ButtonImage):
-    def __init__(self, image, onclick_f, text, text_color=Color("white"), font=FONT, image_hover=None,
+    def __init__(self, image, onclick_f, text, text_color=Color("white"), font=pg.font.SysFont("Arial", 15),
+                 image_hover=None,
                  text_offset=(0, 0)):
         super().__init__(image, onclick_f, hover_image=image_hover)
         self.text = text
@@ -217,8 +221,8 @@ class ButtonText(ButtonRect):
                  text="",
                  onclick_f=None,
                  rect_color=Color("black"),
-                 font=FONT,
                  border_radius=0,
+                 font=None,
                  font_color=None,
                  outline_color=None,
                  fixed_width=None,
@@ -238,8 +242,7 @@ class ButtonText(ButtonRect):
         h = self.text_surface.get_height() + 20
 
         if fixed_width:
-            w = fixed_width
-            self.fixed_width = w
+            self.fixed_width = fixed_width
         else:
             self.fixed_width = None
         super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group,
@@ -278,7 +281,7 @@ class ButtonThreadText(ButtonRect):
                  text_during="",
                  text_after="",
                  border_radius=0,
-                 font=FONT,
+                 font=pg.font.SysFont("Arial", 15),
                  text_color=(255, 255, 255)):
         self.text_before = text_before
         self.text_during = text_during
