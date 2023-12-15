@@ -1,21 +1,19 @@
 import pygame as pg
+import pygame.font
 from pygame import Color
 
-pg.font.init()
-FONT = pg.font.SysFont("Arial", 20)
+pygame.font.init()
 
 
 class EasyObject:
-    def __init__(self, *, ui_group=None, font=FONT):
+    def __init__(self, *, ui_group=None):
         if ui_group:
             ui_group.add(self)
-        self.font = font
         self.x = 0
         self.y = 0
         self.w = 0
         self.h = 0
         self.rect = pg.Rect(self.x, self.y, self.w, self.h)
-
         self.hovered = False
 
     def update_pos(self, x, y):
