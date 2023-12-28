@@ -1,17 +1,10 @@
 from enum import Enum
-
 import pygame as pg
 from pygame import Rect
 from pygame.color import Color
-
-from PygameUIKit.super_object import Group, EasyObject
+from .label import TextAlignment, Label, DEFAULT_FONT
+from .super_object import Group, EasyObject
 from . import utilis
-
-pg.font.init()
-
-
-# Instanciating a default font here leads to a low level pygame error when restarting an app with a font instanciated in
-# the previous run
 
 
 class EasyButton(EasyObject):
@@ -86,8 +79,9 @@ class ButtonRect(EasyButton):
         self.surface = pg.surface.Surface((self.rect.w, self.rect.h), pg.SRCALPHA)
         pg.draw.rect(self.surface, self.bg_color, self.surface.get_rect(), border_radius=self.border_radius, width=0)
         if self.outline_color:
-            pg.draw.rect(self.surface, self.outline_color, self.surface.get_rect(), border_radius=self.border_radius,
-                         width=2)
+            pg.draw.rect(self.surface,
+                         self.outline_color,
+                         self.surface.get_rect(), border_radius=self.border_radius, width=2)
         self.render_hover()
         self.render_clicked()
 
@@ -162,6 +156,11 @@ class ButtonPngIcon(ButtonImage):
 
 
 class ButtonThreadImage(ButtonImage):
+    """
+    Really specific button type, useful for button that need to have a state depending on a thread
+    e.g a button that start matchmaking
+    """
+
     def __init__(self, image_idle, image_working, image_hover, img_success, onclick_f):
         super().__init__(image_idle, onclick_f)
         self.image_idle = image_idle
@@ -170,12 +169,12 @@ class ButtonThreadImage(ButtonImage):
         self.img_success = img_success
 
         self.isWorking = False
-        self.isSucces = False
+        self.isSuccess = False
 
     def draw(self, screen, x, y):
         self.rect.topleft = (x, y)
 
-        if self.isSucces:
+        if self.isSuccess:
             image = self.img_success
         elif self.isWorking:
             image = self.image_working
@@ -194,7 +193,6 @@ class ButtonThreadImage(ButtonImage):
         if thread.is_alive():
             self.working()
             if cond:
-                print("success")
                 self.success()
         else:
             self.idle()
@@ -204,16 +202,10 @@ class ButtonThreadImage(ButtonImage):
 
     def idle(self):
         self.isWorking = False
-        self.isSucces = False
+        self.isSuccess = False
 
     def success(self):
-        self.isSucces = True
-
-
-class TextAlignment(Enum):
-    LEFT = 1
-    RIGHT = 2
-    CENTER = 3
+        self.isSuccess = True
 
 
 class ButtonText(ButtonRect):
@@ -222,56 +214,44 @@ class ButtonText(ButtonRect):
                  onclick_f=None,
                  rect_color=Color("black"),
                  border_radius=0,
-                 font=None,
+                 font=DEFAULT_FONT,
                  font_color=None,
                  outline_color=None,
                  fixed_width=None,
-                 text_align=TextAlignment.LEFT,
+                 text_align=None,
                  ui_group=None):
-        self.text_align = text_align
-        self.text = text
-        if font_color is None:
-            self.font_color = utilis.best_contrast_color(rect_color)
-        else:
-            self.font_color = font_color
-        self.font = font
-        self.text_surface = self.font.render(self.text, True, self.font_color)
-        self.text_rect = self.text_surface.get_rect()
 
-        w = self.text_surface.get_width() + 20
-        h = self.text_surface.get_height() + 20
+        if not font_color:
+            font_color = utilis.best_contrast_color(rect_color)
+        self.fixed_width = fixed_width
 
-        if fixed_width:
-            self.fixed_width = fixed_width
-        else:
-            self.fixed_width = None
-        super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group,
+        if text_align == "center" and fixed_width is None:
+            raise ValueError("Text align center is only available with fixed width")
+
+        rect = Rect(0, 0, fixed_width, 0) if fixed_width else None
+        self.label = Label(text, font_color, font=font, text_align=text_align, bounding_rect=rect)
+
+        super().__init__(0, 0, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group,
                          outline_color=outline_color)
 
     def render(self):
-        self.text_surface = self.font.render(self.text, True, self.font_color)
-        self.text_rect = self.text_surface.get_rect()
+        self.label.render_text()
         if self.fixed_width:
             self.rect.w = self.fixed_width
         else:
-            self.rect = self.text_surface.get_rect().inflate(20, 20)
+            self.rect.w = self.label.rect.w + 20
+        self.rect.h = self.label.rect.h + 20
         super().render()
 
     def change_text(self, new_text):
-        if new_text == self.text:
+        if new_text == self.label.text:
             return
-
-        self.text = new_text
+        self.label.text = new_text
         self.render()
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
-        if self.text_align == TextAlignment.LEFT:
-            screen.blit(self.text_surface, (x + 10, y + 10))
-        elif self.text_align == TextAlignment.RIGHT:
-            screen.blit(self.text_surface, (x + self.rect.w - self.text_surface.get_width() - 10, y + 10))
-        elif self.text_align == TextAlignment.CENTER:
-            screen.blit(self.text_surface, (x + self.rect.w // 2 - self.text_surface.get_width() // 2, y + 10))
+        self.label.draw(screen, x, y)
 
 
 class ButtonThreadText(ButtonRect):
@@ -300,7 +280,7 @@ class ButtonThreadText(ButtonRect):
         super().__init__(w, h, rect_color, onclick_f, border_radius)
 
         self.isWorking = False
-        self.isSucces = False
+        self.isSuccess = False
 
     def render_text_surfaces(self):
         self.text_surface_idle = self.font.render(self.text_before, True, self.font_color)
@@ -309,7 +289,7 @@ class ButtonThreadText(ButtonRect):
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
-        if self.isSucces:
+        if self.isSuccess:
             screen.blit(self.text_surface_success, (x + 10, y + 10))
         elif self.isWorking:
             screen.blit(self.text_surface_working, (x + 10, y + 10))
@@ -331,19 +311,19 @@ class ButtonThreadText(ButtonRect):
 
     def working(self):
         self.isWorking = True
-        self.isSucces = False
+        self.isSuccess = False
 
         self.rect.w = self.text_surface_working.get_width() + 20
         super().render()
 
     def idle(self):
         self.isWorking = False
-        self.isSucces = False
+        self.isSuccess = False
         self.rect.w = self.text_surface_idle.get_width() + 20
         super().render()
 
     def success(self):
-        self.isSucces = True
+        self.isSuccess = True
         self.isWorking = False
         self.rect.w = self.text_surface_success.get_width() + 20
         super().render()

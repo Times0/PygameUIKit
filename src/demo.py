@@ -5,7 +5,7 @@ import pygame
 from pygame import Color
 
 from src.PygameUIKit import Group
-from src.PygameUIKit import text_input, button, slider, dropdown
+from src.PygameUIKit import text_input, button, slider, combobox
 from src.PygameUIKit.barchart import BarChart
 
 #
@@ -30,19 +30,20 @@ class Demo:
         self.clock = pygame.time.Clock()
 
         self.easy_objects = Group()
-        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2, ui_group=self.easy_objects,font=def_font)
+        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2, ui_group=self.easy_objects,
+                                              font=def_font)
         self.btn_pause = button.ButtonTwoStates(img_play, img_stop, do_nothing, ui_group=self.easy_objects)
         self.btn_png = button.ButtonPngIcon(img_play, self.change_values, inflate=10, ui_group=self.easy_objects)
 
         self.btn_pause.connect(self.toggle_dance)
 
-        self.slider = slider.Slider(0, 100, 1, show_value=True, ui_group=self.easy_objects,font=def_font)
+        self.slider = slider.Slider(0, 100, 1, show_value=True, ui_group=self.easy_objects, font=def_font)
         self.slider.connect(self.change_values)
 
-        self.dropdown = dropdown.ComboBox(["Hello", "World", "And", "You"], ui_group=self.easy_objects,font=def_font)
+        self.dropdown = combobox.ComboBox(["Hello", "World", "And", "You"], ui_group=self.easy_objects, font=def_font)
 
         data = [10, 20, 30, 40, 50]
-        self.chart = BarChart(data, ui_group=self.easy_objects, max_value=100,font=def_font)
+        self.chart = BarChart(data, ui_group=self.easy_objects, max_value=100, font=def_font)
 
         for i in range(4):
             self.dropdown.add_action(i, lambda i=i: self.text_input.set_text(self.dropdown.elements[i]))
@@ -71,6 +72,7 @@ class Demo:
         self.easy_objects.update(dt)
         if self.dancing:
             self.change_values()
+
     def draw(self, win):
         W, H = self.screen.get_size()
         win.fill(Color(224, 224, 224))
