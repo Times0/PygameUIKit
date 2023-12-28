@@ -43,3 +43,7 @@ def load_image(path, size=None) -> pg.Surface:
     if size is not None:
         image = pg.transform.scale(image, size).convert_alpha()
     return image
+
+
+def ligther_color(color: Color, strength: int = 50) -> Color:
+    return Color(min(color.r + strength, 255), min(color.g + strength, 255), min(color.b + strength, 255))

@@ -3,6 +3,7 @@ import os
 import pygame as pg
 from pygame.locals import *
 from .super_object import EasyObject
+from .utilis import ligther_color
 
 pg.font.init()
 COLOR_INACTIVE = pg.Color('lightskyblue3')
@@ -15,13 +16,14 @@ def is_char(unicode):
     return unicode.isalpha() or unicode.isdigit() or unicode in " .,:;?!@#$%^&*()_-+=~`[]{}\\|/<>\"'"
 
 
-class InputBox(EasyObject):
+class TextInput(EasyObject):
     def __init__(self, *,
                  text="",
                  font: pg.font.Font = None,
                  fixed_width: int = None,
                  text_color=pg.Color('black'),
                  border_radius=0,
+                 placeholder="",
                  ui_group=None):
         """
         if width is None, then the width will adapt to the text
@@ -35,6 +37,8 @@ class InputBox(EasyObject):
         self.font = font
         self.max_width = fixed_width
         self.border_radius = border_radius
+        self.placeholder = placeholder
+        self.placeholder_surface = None
 
         self.last_key_press = 0
         self.time_since_first_key_press = 0
@@ -152,11 +156,14 @@ class InputBox(EasyObject):
         pg.draw.rect(rect_img, self.color, rect_img.get_rect(), border_radius=self.border_radius, width=1)
 
         # Draw text
-        text_width = self.txt_surface.get_width()
-        if text_width > self.rect.width - 10:
-            rect_img.blit(self.txt_surface, self.txt_surface.get_rect(topright=(self.rect.width - 5, 5)))
+        if self.text == "":
+            self.draw_placeholder(rect_img)
         else:
-            rect_img.blit(self.txt_surface, (5, 5))
+            text_width = self.txt_surface.get_width()
+            if text_width > self.rect.width - 10:
+                rect_img.blit(self.txt_surface, self.txt_surface.get_rect(topright=(self.rect.width - 5, 5)))
+            else:
+                rect_img.blit(self.txt_surface, (5, 5))
 
         # Draw cursor
         if self.active:
@@ -168,6 +175,11 @@ class InputBox(EasyObject):
             else:
                 rect_img.blit(cursor, (cursor_pos + 5, 5))
         screen.blit(rect_img, (self.rect.x, self.rect.y))
+
+    def draw_placeholder(self, rect_img):
+        if not self.placeholder_surface:
+            self.placeholder_surface = self.font.render(self.placeholder, True, ligther_color(self.text_color, strength=100))
+        rect_img.blit(self.placeholder_surface, (5, 5))
 
     def get_text(self):
         return self.text
