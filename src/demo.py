@@ -30,8 +30,8 @@ class Demo:
         self.clock = pygame.time.Clock()
 
         self.easy_objects = Group()
-        self.text_input = text_input.InputBox(fixed_width=200, border_radius=2, ui_group=self.easy_objects,
-                                              font=def_font)
+        self.text_input = text_input.TextInput(placeholder="This is a placeholder text", fixed_width=200, border_radius=2, ui_group=self.easy_objects,
+                                               font=def_font)
         self.btn_pause = button.ButtonTwoStates(img_play, img_stop, do_nothing, ui_group=self.easy_objects)
         self.btn_png = button.ButtonPngIcon(img_play, self.change_values, inflate=10, ui_group=self.easy_objects)
 

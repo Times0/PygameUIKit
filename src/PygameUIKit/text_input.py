@@ -3,6 +3,7 @@ import os
 import pygame as pg
 from pygame.locals import *
 from .super_object import EasyObject
+from .utilis import ligther_color
 
 pg.font.init()
 COLOR_INACTIVE = pg.Color('lightskyblue3')
@@ -10,31 +11,36 @@ COLOR_ACTIVE = pg.Color('dodgerblue2')
 TIME_OUT_FIRST = 500
 TIME_OUT = 40
 
+SMALL_FONT = pg.font.SysFont("Arial", 15)
+
 
 def is_char(unicode):
     return unicode.isalpha() or unicode.isdigit() or unicode in " .,:;?!@#$%^&*()_-+=~`[]{}\\|/<>\"'"
 
 
-class InputBox(EasyObject):
+class TextInput(EasyObject):
     def __init__(self, *,
                  text="",
                  font: pg.font.Font = None,
                  fixed_width: int = None,
-                 text_color=pg.Color('black'),
+                 font_color=pg.Color('black'),
                  border_radius=0,
+                 placeholder="",
                  ui_group=None):
         """
         if width is None, then the width will adapt to the text
         """
         super().__init__(ui_group=ui_group)
         self.color = COLOR_INACTIVE
-        self.text_color = text_color
+        self.font_color = Color(font_color)
         self.text = text
         self.cursor = 0
         self.active = False
         self.font = font
         self.max_width = fixed_width
         self.border_radius = border_radius
+        self.placeholder = placeholder
+        self.placeholder_surface = None
 
         self.last_key_press = 0
         self.time_since_first_key_press = 0
@@ -48,7 +54,7 @@ class InputBox(EasyObject):
             self.rect = pg.Rect(0, 0, 0, 20)  # width will be changed when rendering
 
         # Render the text to get the height
-        fake_render = self.font.render("A", True, self.text_color)
+        fake_render = self.font.render("A", True, self.font_color)
         self.rect.h = fake_render.get_height() + 10
         self.bg_trans = 0
         self.hover = False
@@ -132,7 +138,7 @@ class InputBox(EasyObject):
         self._render()
 
     def _render(self):
-        self.txt_surface = self.font.render(self.text, True, self.text_color)
+        self.txt_surface = self.font.render(self.text, True, self.font_color)
         if not self.max_width:
             self.rect.width = self.txt_surface.get_width() + 1
 
@@ -152,22 +158,32 @@ class InputBox(EasyObject):
         pg.draw.rect(rect_img, self.color, rect_img.get_rect(), border_radius=self.border_radius, width=1)
 
         # Draw text
-        text_width = self.txt_surface.get_width()
-        if text_width > self.rect.width - 10:
-            rect_img.blit(self.txt_surface, self.txt_surface.get_rect(topright=(self.rect.width - 5, 5)))
+        if self.text == "":
+            self.draw_placeholder(rect_img)
         else:
-            rect_img.blit(self.txt_surface, (5, 5))
+            text_width = self.txt_surface.get_width()
+            if text_width > self.rect.width - 10:
+                rect_img.blit(self.txt_surface, self.txt_surface.get_rect(topright=(self.rect.width - 5, 5)))
+            else:
+                rect_img.blit(self.txt_surface, (5, 5))
 
         # Draw cursor
         if self.active:
             cursor = pg.surface.Surface((1, self.rect.h - 10))
-            cursor.fill(self.text_color)
-            cursor_pos = self.font.render(self.text[:self.cursor], True, self.text_color).get_width()
+            cursor.fill(self.font_color)
+            cursor_pos = self.font.render(self.text[:self.cursor], True, self.font_color).get_width()
             if cursor_pos > self.rect.width - 10:
                 rect_img.blit(cursor, cursor.get_rect(topright=(self.rect.width - 5, 5)))
             else:
                 rect_img.blit(cursor, (cursor_pos + 5, 5))
         screen.blit(rect_img, (self.rect.x, self.rect.y))
+
+    def draw_placeholder(self, rect_img):
+        if not self.placeholder_surface:
+            self.placeholder_surface = self.font.render(self.placeholder, True, self.font_color)
+            self.placeholder_surface.set_alpha(100)
+
+        rect_img.blit(self.placeholder_surface, (5, 5))
 
     def get_text(self):
         return self.text

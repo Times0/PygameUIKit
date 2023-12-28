@@ -1,3 +1,4 @@
+import threading
 from enum import Enum
 import pygame as pg
 from pygame import Rect
@@ -257,12 +258,17 @@ class ButtonText(ButtonRect):
 class ButtonThreadText(ButtonRect):
     def __init__(self, *, rect_color=(0, 0, 0),
                  onclick_f=None,
+                 thread=None,
                  text_before="",
                  text_during="",
                  text_after="",
                  border_radius=0,
                  font=pg.font.SysFont("Arial", 15),
+                 ui_group=None,
                  text_color=(255, 255, 255)):
+
+        self.thread = thread
+
         self.text_before = text_before
         self.text_during = text_during
         self.text_after = text_after
@@ -277,7 +283,7 @@ class ButtonThreadText(ButtonRect):
 
         w = self.text_surface_idle.get_width() + 20
         h = self.text_surface_idle.get_height() + 20
-        super().__init__(w, h, rect_color, onclick_f, border_radius)
+        super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group)
 
         self.isWorking = False
         self.isSuccess = False
@@ -296,7 +302,7 @@ class ButtonThreadText(ButtonRect):
         else:
             screen.blit(self.text_surface_idle, (x + 10, y + 10))
 
-    def check_thread(self, thread):
+    def check_thread(self, thread: threading.Thread, success_condition):
         if not thread:
             self.idle()
             return
@@ -307,7 +313,10 @@ class ButtonThreadText(ButtonRect):
             if thread.ident is None:
                 self.idle()
             else:
-                self.success()
+                if success_condition:
+                    self.success()
+                else:
+                    self.idle()
 
     def working(self):
         self.isWorking = True
@@ -326,6 +335,7 @@ class ButtonThreadText(ButtonRect):
         self.isSuccess = True
         self.isWorking = False
         self.rect.w = self.text_surface_success.get_width() + 20
+        self.bg_color = Color((87, 147, 94))
         super().render()
 
 

@@ -17,13 +17,23 @@ class Label(EasyObject):
     def __init__(self, text, font_color, font=DEFAULT_FONT, text_align=TextAlignment.LEFT, bounding_rect=None):
         super().__init__()
         self.bounds = bounding_rect  # Used only when centering the text
-        self.text = text
+        self._text = text
         self.font_color = font_color
         self.font = font or DEFAULT_FONT
         self.text_surface: pg.Surface | None = None
         self.rect: pg.Rect | None = None
         self.text_align: TextAlignment = text_align or TextAlignment.LEFT
         self.render_text()
+
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        if self._text != value:
+            self._text = value
+            self.render_text()
 
     def draw(self, screen, x, y):
         if self.text_align == TextAlignment.LEFT or self.text_align == TextAlignment.LEFT.value:
