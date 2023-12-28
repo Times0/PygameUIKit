@@ -11,6 +11,8 @@ COLOR_ACTIVE = pg.Color('dodgerblue2')
 TIME_OUT_FIRST = 500
 TIME_OUT = 40
 
+SMALL_FONT = pg.font.SysFont("Arial", 15)
+
 
 def is_char(unicode):
     return unicode.isalpha() or unicode.isdigit() or unicode in " .,:;?!@#$%^&*()_-+=~`[]{}\\|/<>\"'"
@@ -21,7 +23,7 @@ class TextInput(EasyObject):
                  text="",
                  font: pg.font.Font = None,
                  fixed_width: int = None,
-                 text_color=pg.Color('black'),
+                 font_color=pg.Color('black'),
                  border_radius=0,
                  placeholder="",
                  ui_group=None):
@@ -30,7 +32,7 @@ class TextInput(EasyObject):
         """
         super().__init__(ui_group=ui_group)
         self.color = COLOR_INACTIVE
-        self.text_color = text_color
+        self.font_color = Color(font_color)
         self.text = text
         self.cursor = 0
         self.active = False
@@ -52,7 +54,7 @@ class TextInput(EasyObject):
             self.rect = pg.Rect(0, 0, 0, 20)  # width will be changed when rendering
 
         # Render the text to get the height
-        fake_render = self.font.render("A", True, self.text_color)
+        fake_render = self.font.render("A", True, self.font_color)
         self.rect.h = fake_render.get_height() + 10
         self.bg_trans = 0
         self.hover = False
@@ -136,7 +138,7 @@ class TextInput(EasyObject):
         self._render()
 
     def _render(self):
-        self.txt_surface = self.font.render(self.text, True, self.text_color)
+        self.txt_surface = self.font.render(self.text, True, self.font_color)
         if not self.max_width:
             self.rect.width = self.txt_surface.get_width() + 1
 
@@ -168,8 +170,8 @@ class TextInput(EasyObject):
         # Draw cursor
         if self.active:
             cursor = pg.surface.Surface((1, self.rect.h - 10))
-            cursor.fill(self.text_color)
-            cursor_pos = self.font.render(self.text[:self.cursor], True, self.text_color).get_width()
+            cursor.fill(self.font_color)
+            cursor_pos = self.font.render(self.text[:self.cursor], True, self.font_color).get_width()
             if cursor_pos > self.rect.width - 10:
                 rect_img.blit(cursor, cursor.get_rect(topright=(self.rect.width - 5, 5)))
             else:
@@ -178,7 +180,9 @@ class TextInput(EasyObject):
 
     def draw_placeholder(self, rect_img):
         if not self.placeholder_surface:
-            self.placeholder_surface = self.font.render(self.placeholder, True, ligther_color(self.text_color, strength=100))
+            self.placeholder_surface = self.font.render(self.placeholder, True, self.font_color)
+            self.placeholder_surface.set_alpha(100)
+
         rect_img.blit(self.placeholder_surface, (5, 5))
 
     def get_text(self):

@@ -46,4 +46,4 @@ def load_image(path, size=None) -> pg.Surface:
 
 
 def ligther_color(color: Color, strength: int = 50) -> Color:
-    return Color(min(color.r + strength, 255), min(color.g + strength, 255), min(color.b + strength, 255))
+    return Color(color.r, color.g, color.b, color.a - strength)
