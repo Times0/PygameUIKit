@@ -1,7 +1,7 @@
 import pygame
 from pygame import Color
-
 from .super_object import EasyObject
+from .label import DEFAULT_FONT
 
 COLOR_COMPLETED = Color(132, 214, 80)
 COLOR_IN_PROGRESS = Color(200, 200, 200)
@@ -11,11 +11,12 @@ COLOR_CIRCLE2 = COLOR_IN_PROGRESS
 
 
 class Slider(EasyObject):
-    def __init__(self, min, max, step, show_value=False, font=pygame.font.SysFont("Arial", 15, bold=True),
+    def __init__(self, min, max, step, show_value=False, font=DEFAULT_FONT,
                  font_color=Color("black"), ui_group=None):
         super().__init__(ui_group=ui_group)
         self.min = min
         self.max = max
+
         self.step = step
         self.current_value = min
         self.show_value = show_value
@@ -73,13 +74,23 @@ class Slider(EasyObject):
         pygame.draw.circle(win, COLOR_CIRCLE1, (value_pos, y), rad_size)
         pygame.draw.circle(win, COLOR_CIRCLE2, (value_pos, y), rad_size - 2)
 
+    def draw_value(self, win):
+        x, y, w, h = self.rect
+
+        if '.' in str(self.current_value):
+            value = round(self.current_value, 2)
+        else:
+            value = int(self.current_value)
+
+        text = self.font.render(str(value), True, self.font_color)
+        win.blit(text, (x + w + 10, y + h // 2 - text.get_height() // 2))
+
     def draw(self, win, x, y, w, h):
         self.rect = pygame.Rect(x, y, w, h)
         self.draw_bar(win)
         self.draw_circle(win)
         if self.show_value:
-            text = self.font.render(str(self.current_value), True, self.font_color)
-            win.blit(text, (x + w + 10, y + h // 2 - text.get_height() // 2))
+            self.draw_value(win)
 
     def get_value(self):
         return self.current_value

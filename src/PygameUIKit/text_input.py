@@ -24,7 +24,7 @@ class InputBox(EasyObject):
                  border_radius=0,
                  ui_group=None):
         """
-        if width is None, then the width will be the width of the text
+        if width is None, then the width will adapt to the text
         """
         super().__init__(ui_group=ui_group)
         self.color = COLOR_INACTIVE
@@ -43,7 +43,7 @@ class InputBox(EasyObject):
         self.linked_unicode = None
 
         if fixed_width:
-            self.rect = pg.Rect(0, 0, fixed_width, 20, )  # width is fixed
+            self.rect = pg.Rect(0, 0, fixed_width, 20)
         else:
             self.rect = pg.Rect(0, 0, 0, 20)  # width will be changed when rendering
 
