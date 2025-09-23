@@ -1,4 +1,5 @@
 import os
+from collections.abc import Callable
 from pygame import Color
 import pygame as pg
 from .label import DEFAULT_FONT, Label
@@ -23,7 +24,7 @@ class ComboBox(ButtonText):
         self.hovered_index = self.selected_index
         self.is_open = False
         self._labels: list[Label] = []
-        self.actions: dict[int, callable] = {}
+        self.actions: dict[int, Callable] = {}
 
         self.img_arrow_down = load_image(os.path.join(cwd, "assets", "combo_box_arrow.png"), (20, 20))
         self.img_arrow_up = pg.transform.rotate(self.img_arrow_down.copy(), 180)

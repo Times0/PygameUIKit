@@ -4,9 +4,9 @@ import random
 import pygame
 from pygame import Color
 
-from src.PygameUIKit import Group
-from src.PygameUIKit import text_input, button, slider, combobox
-from src.PygameUIKit.barchart import BarChart
+from PygameUIKit import Group
+from PygameUIKit import text_input, button, slider, combobox
+from PygameUIKit.barchart import BarChart
 
 #
 #

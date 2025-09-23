@@ -21,8 +21,8 @@ def is_char(unicode):
 class TextInput(EasyObject):
     def __init__(self, *,
                  text="",
-                 font: pg.font.Font = None,
-                 fixed_width: int = None,
+                 font: pg.font.Font | None = None,
+                 fixed_width: int | None = None,
                  font_color=pg.Color('black'),
                  border_radius=0,
                  placeholder="",

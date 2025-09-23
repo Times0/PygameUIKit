@@ -18,7 +18,7 @@ def color_from_float(colors):
 
 class BarChart(EasyObject):
     def __init__(self, values: list[int],
-                 labels: list[str] = None,
+                 labels: list[str] | None = None,
                  max_value=None,
                  ui_group=None,
                  font=pg.font.SysFont("Arial", 15),
