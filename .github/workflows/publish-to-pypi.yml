@@ -2,31 +2,59 @@ name: Publish to PyPI
 
 on:
   push:
-    branches:
-      - master
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: checks
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-
+    environment:
+      name: pypi
+      url: https://pypi.org/project/PygameUIKit/
+    permissions:
+      contents: write
+      id-token: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.11
-
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt 
-        python -m pip install --upgrade build twine
-
-    - name: Build and Publish to PyPI
-      run: |
-        python -m build
-        python -m twine upload --skip-existing --verbose --repository pypi dist/*
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+      - name: Verify release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          uv run --no-project python -c 'import os, tomllib; from pathlib import Path; version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]; assert os.environ["RELEASE_TAG"] == f"v{version}", "Tag must match package version"'
+      - run: uv build
+      - name: Publish with existing token or trusted publishing
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -n "$UV_PUBLISH_TOKEN" ]; then
+            uv publish --trusted-publishing never --check-url https://pypi.org/simple/
+          else
+            unset UV_PUBLISH_TOKEN
+            uv publish --trusted-publishing always --check-url https://pypi.org/simple/
+          fi
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "PygameUIKit $RELEASE_TAG"
+          fi
+          gh release upload "$RELEASE_TAG" dist/* --clobber

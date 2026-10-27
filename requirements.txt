@@ -1,1 +1,2 @@
-pygame
+# Compatibility with pip-based development; dependencies live in pyproject.toml.
+-e .

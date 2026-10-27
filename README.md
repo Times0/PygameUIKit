@@ -1,98 +1,86 @@
-![Contributors](https://img.shields.io/github/contributors/Times0/PygameUIKit?color=dark-green) ![Issues](https://img.shields.io/github/issues/Times0/PygameUIKit) ![License](https://img.shields.io/github/license/Times0/PygameUIKit)
-[![Publish to PyPI](https://github.com/Times0/PygameUIKit/actions/workflows/publish-to-pypi.yml/badge.svg)](https://github.com/Times0/PygameUIKit/actions/workflows/publish-to-pypi.yml)
+# PygameUIKit
 
-[demoPygameUIKit.webm](https://github.com/Times0/PygameUIKit/assets/45049767/90bd6e2d-5f3c-4af1-89ce-aee48a993c80)
+Small UI widgets for Pygame: buttons, sliders, dropdowns, text inputs, labels, and animated bar charts. You control the layout; the kit handles interaction and drawing.
 
-## Getting Started
+Requires Python 3.11+ (tested through 3.15). Uses [pygame-ce](https://pyga.me/), which provides the familiar `import pygame` API. Use a fresh environment when upgrading from classic `pygame`; the two packages share the same import name.
+
+## Install
 
 ```sh
-pip install PygameUIKit
+uv add PygameUIKit
 ```
 
-# Easy to use
+Or use `pip install PygameUIKit`.
+
+## Try it
+
+With [uv](https://docs.astral.sh/uv/getting-started/installation/) installed:
+
+```sh
+git clone https://github.com/Times0/PygameUIKit.git
+cd PygameUIKit
+uv run pygameuikit-demo
+```
+
+uv installs Python and dependencies automatically. The demo is also included in the installed package: `pygameuikit-demo` or `python -m PygameUIKit.demo`.
+
+## Use it
 
 ```python
 import pygame
-from PygameUIKit import Group, button, slider
+from PygameUIKit import Group, button
 
-W = 800
-H = 600
+pygame.init()
+screen = pygame.display.set_mode((640, 360))
+clock = pygame.time.Clock()
+ui = Group()
+hello = button.ButtonText(
+    "Say hello",
+    lambda: print("Hello!"),
+    rect_color=(85, 145, 92),
+    border_radius=8,
+    ui_group=ui,
+)
 
+running = True
+while running:
+    dt = clock.tick(60) / 1000
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        else:
+            ui.handle_event(event)
+    if not running:
+        break
+    ui.update(dt)
+    screen.fill((30, 32, 36))
+    hello.draw(screen, 240, 150)
+    pygame.display.flip()
 
-class MyGame:
-    def __init__(self):
-        # You class code here
-        self.window = pygame.display.set_mode((W, H), pygame.RESIZABLE)
-        # Ui
-        self.ui = Group()  # Create a group to hold all the ui elements. This is filled with the ui elements below thanks to the ui_group parameter
-        self.btn_start = button.ButtonText("Start",
-                                           self.start,
-                                           rect_color=(85, 145, 92),
-                                           fixed_width=200,
-                                           border_radius=10,
-                                           text_align="center",
-                                           ui_group=self.ui)
-
-        self.btn_quit = button.ButtonText("Quit", self.quit,
-                                          rect_color=(181, 71, 71),
-                                          fixed_width=180,
-                                          border_radius=10,
-                                          text_align="center",
-                                          ui_group=self.ui)
-
-    def run(self):
-        while True:  # Game loop
-            # Your game code here
-
-            # Ui
-            # Handle events
-            events = pygame.event.get()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                self.ui.handle_event(event)  # Handle the events for all the ui elements
-
-            # Draw
-            self.window.fill((0, 0, 0))
-            self.btn_start.draw(self.window, *self.btn_start.surface.get_rect(center=(W // 2, H // 2 - 50)).topleft)
-            self.btn_quit.draw(self.window, *self.btn_quit.surface.get_rect(center=(W // 2, H // 2 + 50)).topleft)
-            pygame.display.flip()
-
-    def start(self):
-        print("Starting")
-
-    def quit(self):
-        print("Quitting")
-        pygame.quit()
-
-
-if __name__ == "__main__":
-    pygame.init()
-    MyGame().run()
+pygame.quit()
 ```
 
-Just put all your ui elements in a **group** and call `group.handle_event(event)`.
-You will have to draw the elements yourself with `element.draw(win, x, y)`.
+Add widgets with `ui_group=ui`, forward each event once, and call `ui.update(dt)` with seconds. Draw each widget at your chosen position. Sliders accept `draw(screen, x, y, width, height)`; charts use the same layout arguments. Draw dropdowns last so their menus appear above other widgets.
 
-That is because you might want to have a custom layout where the x and y coordinates are calculated on the fly.
+- `button`: text, image, icon, toggle, and thread-status buttons.
+- `slider.Slider(min, max, step)`: `get_value()` and `connect(callback)`.
+- `combobox.ComboBox(["One", "Two"])`: `get_value()` and `add_action(index, callback)`.
+- `text_input.TextInput(placeholder="Name")`: `get_text()` and `set_text(text)`.
+- `label.Label("Hello", "white")`: update the `text` property.
+- `barchart.BarChart([10, 20, 30])`: `change_value(index, value)`; accepts non-negative values.
 
-# Available elements
+Text inputs use Pygame's `TEXTINPUT` events for Unicode text and `KEYDOWN` for editing. Forward both through `Group`; don't also forward the same events separately to the input. Pass a custom `pygame.font.Font` if you need a particular font or character set.
 
-- Buttons
-    - `button.ButtonText`
-    - `button.ButtonImage`
-    - `button.ButtonImageText`
-    - `button.ButtonPngIcon`
-    - `button.ButtonTwoStates`
-    - `button.ButtonThreadText`
-- Slider
-- ComboBox
-- TextInput
-- Label
-- BarChart
+## Develop
 
-And more to come :)
+```sh
+uv sync --locked
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+uv build
+```
 
-# Contributing
+Tests use SDL's dummy drivers and don't need a display. CI checks Python 3.11–3.15 on Linux and Python 3.15 on Windows and macOS. See [RELEASING.md](https://github.com/Times0/PygameUIKit/blob/master/RELEASING.md) for publishing.
 
-Feel free to do a pull request if you want to add a new element or improve the code.
+MIT licensed. Contributions welcome.

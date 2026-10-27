@@ -1,11 +1,12 @@
 import threading
-from enum import Enum
+
 import pygame as pg
 from pygame import Rect
 from pygame.color import Color
-from .label import TextAlignment, Label, DEFAULT_FONT
-from .super_object import Group, EasyObject
+
 from . import utilis
+from .label import DEFAULT_FONT, Label, TextAlignment
+from .super_object import EasyObject, Group, get_font
 
 
 class EasyButton(EasyObject):
@@ -21,14 +22,14 @@ class EasyButton(EasyObject):
 
     def _on_hover(self):
         self.on_hover()
-        pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_HAND)
+        utilis.set_system_cursor(pg.SYSTEM_CURSOR_HAND)
 
     def on_hover(self):
         pass
 
     def _on_unhover(self):
         self.on_unhover()
-        pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
+        utilis.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
 
     def on_unhover(self):
         pass
@@ -38,14 +39,18 @@ class EasyButton(EasyObject):
             self.handle_event(event)
 
     def handle_event(self, event):
-        if event.type == pg.MOUSEBUTTONDOWN:
+        if event.type == pg.WINDOWFOCUSLOST:
+            self.clicked = False
+            self.is_hover = False
+        if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
             if self.is_mouse_on_button(event.pos):
                 self.clicked = True
 
-        if event.type == pg.MOUSEBUTTONUP:
-            if self.clicked and self.is_mouse_on_button(event.pos):
-                self._on_click()
+        if event.type == pg.MOUSEBUTTONUP and event.button == 1:
+            activate = self.clicked and self.is_mouse_on_button(event.pos)
             self.clicked = False
+            if activate:
+                self._on_click()
 
         if event.type == pg.MOUSEMOTION:
             was_hover = self.is_hover
@@ -56,8 +61,9 @@ class EasyButton(EasyObject):
                 self._on_unhover()
 
     def _on_click(self):
-        pg.mouse.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
-        self.onclick_f()
+        utilis.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
+        if self.onclick_f is not None:
+            self.onclick_f()
 
     def connect(self, func, when="on_click"):
         if when == "on_click":
@@ -78,11 +84,21 @@ class ButtonRect(EasyButton):
 
     def render(self):
         self.surface = pg.surface.Surface((self.rect.w, self.rect.h), pg.SRCALPHA)
-        pg.draw.rect(self.surface, self.bg_color, self.surface.get_rect(), border_radius=self.border_radius, width=0)
+        pg.draw.rect(
+            self.surface,
+            self.bg_color,
+            self.surface.get_rect(),
+            border_radius=self.border_radius,
+            width=0,
+        )
         if self.outline_color:
-            pg.draw.rect(self.surface,
-                         self.outline_color,
-                         self.surface.get_rect(), border_radius=self.border_radius, width=2)
+            pg.draw.rect(
+                self.surface,
+                self.outline_color,
+                self.surface.get_rect(),
+                border_radius=self.border_radius,
+                width=2,
+            )
         self.render_hover()
         self.render_clicked()
 
@@ -106,7 +122,7 @@ class ButtonImage(EasyButton):
     def __init__(self, image, onclick_f, hover_image=None, ui_group=None):
         super().__init__(onclick_f, ui_group=ui_group)
         self.image = image
-        self.hover_image = hover_image
+        self.hover_image = hover_image if hover_image is not None else image
         self.rect: Rect = self.image.get_rect()
 
     def draw(self, screen, x, y):
@@ -118,25 +134,38 @@ class ButtonImage(EasyButton):
 
 
 class ButtonImageText(ButtonImage):
-    def __init__(self, image, onclick_f, text, text_color=Color("white"), font=pg.font.SysFont("Arial", 15),
-                 image_hover=None,
-                 text_offset=(0, 0)):
-        super().__init__(image, onclick_f, hover_image=image_hover)
+    def __init__(
+        self,
+        image,
+        onclick_f,
+        text,
+        text_color=(255, 255, 255),
+        font=None,
+        image_hover=None,
+        text_offset=(0, 0),
+        ui_group=None,
+    ):
+        super().__init__(image, onclick_f, hover_image=image_hover, ui_group=ui_group)
         self.text = text
         self.text_color = text_color
         self.text_offset = text_offset
-        self.font = font
+        self.font = font if font is not None else get_font(15)
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
         text = self.font.render(self.text, True, self.text_color)
         text_rect = text.get_rect()
-        text_rect.center = (self.rect.centerx + self.text_offset[0], self.rect.centery + self.text_offset[1])
+        text_rect.center = (
+            self.rect.centerx + self.text_offset[0],
+            self.rect.centery + self.text_offset[1],
+        )
         screen.blit(text, text_rect)
 
 
 class ButtonPngIcon(ButtonImage):
-    def __init__(self, image, onclick_f, hover_color=Color("gray"), opacity=0.5, inflate=10, ui_group=None):
+    def __init__(
+        self, image, onclick_f, hover_color=(128, 128, 128), opacity=0.5, inflate=10, ui_group=None
+    ):
         super().__init__(image, onclick_f, ui_group=ui_group)
         self.hover_color = hover_color
         self.opacity = int(opacity * 255)
@@ -147,11 +176,13 @@ class ButtonPngIcon(ButtonImage):
 
         # if hover then blit a transparent rect behind the image
         if self.is_hover or self.clicked:
-            utilis.draw_transparent_rect_with_border_radius(screen,
-                                                            self.hover_color,
-                                                            self.rect.inflate(self.inflate, self.inflate),
-                                                            10,
-                                                            self.opacity)
+            utilis.draw_transparent_rect_with_border_radius(
+                screen,
+                self.hover_color,
+                self.rect.inflate(self.inflate, self.inflate),
+                10,
+                self.opacity,
+            )
 
         screen.blit(self.image, self.rect)
 
@@ -162,11 +193,13 @@ class ButtonThreadImage(ButtonImage):
     e.g a button that start matchmaking
     """
 
-    def __init__(self, image_idle, image_working, image_hover, img_success, onclick_f):
-        super().__init__(image_idle, onclick_f)
+    def __init__(
+        self, image_idle, image_working, image_hover, img_success, onclick_f, ui_group=None
+    ):
+        super().__init__(image_idle, onclick_f, hover_image=image_hover, ui_group=ui_group)
         self.image_idle = image_idle
         self.image_working = image_working
-        self.image_hover = image_hover
+        self.image_hover = self.hover_image
         self.img_success = img_success
 
         self.isWorking = False
@@ -193,13 +226,14 @@ class ButtonThreadImage(ButtonImage):
             return
         if thread.is_alive():
             self.working()
-            if cond:
-                self.success()
+        elif thread.ident is not None and cond:
+            self.success()
         else:
             self.idle()
 
     def working(self):
         self.isWorking = True
+        self.isSuccess = False
 
     def idle(self):
         self.isWorking = False
@@ -207,33 +241,46 @@ class ButtonThreadImage(ButtonImage):
 
     def success(self):
         self.isSuccess = True
+        self.isWorking = False
 
 
 class ButtonText(ButtonRect):
-    def __init__(self,
-                 text="",
-                 onclick_f=None,
-                 rect_color=Color("black"),
-                 border_radius=0,
-                 font=DEFAULT_FONT,
-                 font_color=None,
-                 outline_color=None,
-                 fixed_width=None,
-                 text_align=None,
-                 ui_group=None):
+    def __init__(
+        self,
+        text="",
+        onclick_f=None,
+        rect_color=(0, 0, 0),
+        border_radius=0,
+        font=DEFAULT_FONT,
+        font_color=None,
+        outline_color=None,
+        fixed_width=None,
+        text_align=None,
+        ui_group=None,
+    ):
 
-        if not font_color:
+        if font_color is None:
             font_color = utilis.best_contrast_color(rect_color)
         self.fixed_width = fixed_width
 
-        if text_align == "center" and fixed_width is None:
-            raise ValueError("Text align center is only available with fixed width")
+        if (
+            text_align in ("center", "right", TextAlignment.CENTER, TextAlignment.RIGHT)
+            and fixed_width is None
+        ):
+            raise ValueError("Center and right alignment require fixed_width")
 
         rect = Rect(0, 0, fixed_width, 0) if fixed_width else None
         self.label = Label(text, font_color, font=font, text_align=text_align, bounding_rect=rect)
 
-        super().__init__(0, 0, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group,
-                         outline_color=outline_color)
+        super().__init__(
+            0,
+            0,
+            rect_color,
+            onclick_f,
+            border_radius=border_radius,
+            ui_group=ui_group,
+            outline_color=outline_color,
+        )
 
     def render(self):
         self.label.render_text()
@@ -256,23 +303,28 @@ class ButtonText(ButtonRect):
 
 
 class ButtonThreadText(ButtonRect):
-    def __init__(self, *, rect_color=(0, 0, 0),
-                 onclick_f=None,
-                 thread=None,
-                 text_before="",
-                 text_during="",
-                 text_after="",
-                 border_radius=0,
-                 font=pg.font.SysFont("Arial", 15),
-                 ui_group=None,
-                 text_color=(255, 255, 255)):
+    def __init__(
+        self,
+        *,
+        rect_color=(0, 0, 0),
+        onclick_f=None,
+        thread=None,
+        text_before="",
+        text_during="",
+        text_after="",
+        border_radius=0,
+        font=None,
+        ui_group=None,
+        text_color=(255, 255, 255),
+    ):
 
         self.thread = thread
+        self.idle_color = rect_color
 
         self.text_before = text_before
         self.text_during = text_during
         self.text_after = text_after
-        self.font = font
+        self.font = font if font is not None else get_font(15)
         self.font_color = text_color
 
         self.text_surface_idle = self.font.render(self.text_before, True, self.font_color)
@@ -283,7 +335,9 @@ class ButtonThreadText(ButtonRect):
 
         w = self.text_surface_idle.get_width() + 20
         h = self.text_surface_idle.get_height() + 20
-        super().__init__(w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group)
+        super().__init__(
+            w, h, rect_color, onclick_f, border_radius=border_radius, ui_group=ui_group
+        )
 
         self.isWorking = False
         self.isSuccess = False
@@ -322,12 +376,14 @@ class ButtonThreadText(ButtonRect):
         self.isWorking = True
         self.isSuccess = False
 
+        self.bg_color = self.idle_color
         self.rect.w = self.text_surface_working.get_width() + 20
         super().render()
 
     def idle(self):
         self.isWorking = False
         self.isSuccess = False
+        self.bg_color = self.idle_color
         self.rect.w = self.text_surface_idle.get_width() + 20
         super().render()
 
@@ -340,20 +396,26 @@ class ButtonThreadText(ButtonRect):
 
 
 class ButtonTwoStates(ButtonPngIcon):
-    def __init__(self, image_default, image_click, onclick_f, hover_color=Color("gray"), opacity=0.5, inflate=10,
-                 ui_group=None):
+    def __init__(
+        self,
+        image_default,
+        image_click,
+        onclick_f,
+        hover_color=(128, 128, 128),
+        opacity=0.5,
+        inflate=10,
+        ui_group=None,
+    ):
         super().__init__(image_default, onclick_f, hover_color, opacity, inflate, ui_group)
-        self.images = {
-            1: image_default,
-            2: image_click
-        }
+        self.images = {1: image_default, 2: image_click}
 
         self.state = 1
 
     def draw(self, screen, x, y):
         self.image = self.images[self.state]
+        self.rect.size = self.image.get_size()
         super().draw(screen, x, y)
 
     def _on_click(self):
-        super()._on_click()
         self.state = 2 if self.state == 1 else 1
+        super()._on_click()

@@ -1,10 +1,12 @@
 import os
-from pygame import Color
+from collections.abc import Callable
+
 import pygame as pg
-from .label import DEFAULT_FONT, Label
+from pygame import Color
 
 from .button import ButtonText
-from .utilis import draw_transparent_rect_with_border_radius, best_contrast_color, load_image
+from .label import DEFAULT_FONT, Label
+from .utilis import draw_transparent_rect_with_border_radius, load_image
 
 PADDING = 10
 
@@ -12,34 +14,44 @@ cwd = os.path.dirname(__file__)
 
 
 class ComboBox(ButtonText):
-    def __init__(self, elements: list[str], ui_group=None, font=DEFAULT_FONT, font_color=Color("black")):
-        super().__init__(ui_group=ui_group, text=elements[0],
-                         onclick_f=self.toggle_open, border_radius=5, fixed_width=200, font=font,
-                         font_color=best_contrast_color(font_color))
-        self.font = font
+    def __init__(self, elements: list[str], ui_group=None, font=DEFAULT_FONT, font_color=(0, 0, 0)):
+        if not elements:
+            raise ValueError("ComboBox requires at least one element")
+        super().__init__(
+            ui_group=ui_group,
+            text=elements[0],
+            onclick_f=self.toggle_open,
+            border_radius=5,
+            fixed_width=200,
+            font=font,
+            font_color=font_color,
+            rect_color=(255, 255, 255),
+        )
+        self.font = self.label.font
         self.text = elements[0]
         self.elements = elements
         self.selected_index = 0
         self.hovered_index = self.selected_index
         self.is_open = False
         self._labels: list[Label] = []
-        self.actions: dict[int, callable] = {}
+        self.actions: dict[int, Callable[[], None]] = {}
 
-        self.img_arrow_down = load_image(os.path.join(cwd, "assets", "combo_box_arrow.png"), (20, 20))
+        self.img_arrow_down = load_image(
+            os.path.join(cwd, "assets", "combo_box_arrow.png"), (20, 20)
+        )
+        self.img_arrow_down.fill((0, 0, 0, 255), special_flags=pg.BLEND_RGBA_MULT)
+        self._pressed_index = None
         self.img_arrow_up = pg.transform.rotate(self.img_arrow_down.copy(), 180)
 
+        self.fixed_width = max(200, max(self.font.size(text)[0] for text in elements) + 50)
+        self.label.bounds.w = self.fixed_width
+        self.render()
         self._render_elements()
 
     def _render_elements(self):
         self._labels.clear()
-        for i, element in enumerate(self.elements):
-            if self.selected_index == i or self.hovered_index == i:
-                color = self.bg_color
-            else:
-                color = best_contrast_color(self.bg_color)
-            label = Label(element, font=self.font, font_color=color)
-            self._labels.append(label)
-            self.rect.width = max(self.rect.width, label.rect.width + PADDING * 2)
+        for element in self.elements:
+            self._labels.append(Label(element, font=self.font, font_color=Color("white")))
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
@@ -48,44 +60,77 @@ class ComboBox(ButtonText):
 
         if self.is_open:
             height = self.rect.h * len(self.elements)
-            draw_transparent_rect_with_border_radius(screen,
-                                                     Color("black"),
-                                                     pg.Rect(x, y + self.rect.h, self.rect.w, height),
-                                                     5,
-                                                     200)
+            draw_transparent_rect_with_border_radius(
+                screen, Color("black"), pg.Rect(x, y + self.rect.h, self.rect.w, height), 5, 200
+            )
             for i in range(len(self.elements)):
                 if i == self.hovered_index or i == self.selected_index:
-                    draw_transparent_rect_with_border_radius(screen,
-                                                             Color("white"),
-                                                             pg.Rect(x, y + self.rect.h * (i + 1), self.rect.w,
-                                                                     self.rect.h).inflate(-PADDING, -PADDING),
-                                                             border_radius=5, alpha=100)
+                    draw_transparent_rect_with_border_radius(
+                        screen,
+                        Color("white"),
+                        pg.Rect(x, y + self.rect.h * (i + 1), self.rect.w, self.rect.h).inflate(
+                            -PADDING, -PADDING
+                        ),
+                        border_radius=5,
+                        alpha=100,
+                    )
                 self._labels[i].draw(screen, x, y + self.rect.h * (i + 1))
 
+    @property
+    def event_priority(self):
+        return int(self.is_open)
+
+    def _option_at(self, pos):
+        menu = pg.Rect(self.rect.x, self.rect.bottom, self.rect.w, self.rect.h * len(self.elements))
+        if menu.collidepoint(pos):
+            return (pos[1] - menu.y) // self.rect.h
+        return None
+
     def handle_event(self, event):
+        if event.type == pg.WINDOWFOCUSLOST or (
+            event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE
+        ):
+            self.is_open = False
+            self._pressed_index = None
+            self.clicked = False
+        if self.is_open and event.type in (pg.MOUSEBUTTONDOWN, pg.MOUSEBUTTONUP, pg.MOUSEMOTION):
+            index = self._option_at(event.pos)
+            if event.type == pg.MOUSEMOTION:
+                self.change_hovered(index)
+                if index is not None:
+                    return True
+            elif event.button == 1:
+                if event.type == pg.MOUSEBUTTONDOWN:
+                    self._pressed_index = index
+                    if index is not None:
+                        return True
+                    if not self.rect.collidepoint(event.pos):
+                        self.is_open = False
+                else:
+                    pressed = self._pressed_index
+                    self._pressed_index = None
+                    if index is not None:
+                        self.is_open = False
+                        if index == pressed:
+                            self.change_selected(index)
+                        return True
+                    if not self.rect.collidepoint(event.pos):
+                        self.is_open = False
+            elif index is not None:
+                return True
         super().handle_event(event)
-        if event.type == pg.MOUSEBUTTONUP:
-            x, y = event.pos
-            if self.is_open:
-                if self.rect.x < x < self.rect.x + self.rect.w:
-                    if self.rect.y + self.rect.h < y < self.rect.y + self.rect.h * (len(self.elements) + 1):
-                        self.change_selected((y - self.rect.y - self.rect.h) // self.rect.h)
-            if not self.rect.colliderect(pg.Rect(x, y, 1, 1)):  # Clicked outside the combo box button
-                self.is_open = False
-        if event.type == pg.MOUSEMOTION:
-            if self.is_open:
-                mouse_pos = event.pos
-                x, y = mouse_pos
-                if self.rect.x < x < self.rect.x + self.rect.w:
-                    if self.rect.y + self.rect.h < y < self.rect.y + self.rect.h * (len(self.elements) + 1):
-                        self.change_hovered((y - self.rect.y - self.rect.h) // self.rect.h)
+        return False
 
     def change_selected(self, index):
+        if not 0 <= index < len(self.elements):
+            raise IndexError("ComboBox index out of range")
         self.selected_index = index
+        self.hovered_index = index
         self.change_text(self.elements[self.selected_index])
+        self.text = self.elements[self.selected_index]
+        self._render_elements()
         if index in self.actions:
             self.actions[index]()
-        self.text = self.elements[self.selected_index]
 
     def toggle_open(self):
         self.is_open = not self.is_open

@@ -1,8 +1,10 @@
+from colorsys import hsv_to_rgb
+from math import isfinite
+
 import pygame as pg
 from pygame import Color, Rect
-import seaborn as sns
 
-from .super_object import EasyObject
+from .super_object import EasyObject, get_font
 from .utilis import draw_transparent_rect_with_border_radius
 
 CHANGE_SPEED = 200
@@ -17,13 +19,22 @@ def color_from_float(colors):
 
 
 class BarChart(EasyObject):
-    def __init__(self, values: list[int],
-                 labels: list[str] = None,
-                 max_value=None,
-                 ui_group=None,
-                 font=pg.font.SysFont("Arial", 15),
-                 labels_color=pg.Color("black")):
+    def __init__(
+        self,
+        values: list[int],
+        labels: list[str] = None,
+        max_value=None,
+        ui_group=None,
+        font=None,
+        labels_color=(0, 0, 0),
+    ):
         super().__init__(ui_group=ui_group)
+        if any(not isfinite(v) or v < 0 for v in values):
+            raise ValueError("Bar values must be finite and non-negative")
+        if max_value is not None and (not isfinite(max_value) or max_value <= 0):
+            raise ValueError("max_value must be finite and positive")
+        if labels is not None and len(labels) != len(values):
+            raise ValueError("labels must have the same length as values")
         self.values = values[:]
         self.max_value = max_value
         self.rect = pg.Rect(0, 0, 0, 0)
@@ -31,14 +42,17 @@ class BarChart(EasyObject):
         self.labels = labels
         self.values_displayed = self.values[:]
 
-        self.font = font
-        self.colors = sns.color_palette("husl", len(self.values))
+        self.font = font if font is not None else get_font(15)
+        self.colors = [hsv_to_rgb(i / len(values), 0.55, 0.85) for i in range(len(values))]
         self.colors = color_from_float(self.colors)
 
     def change_value(self, index, value):
+        if not isfinite(value) or value < 0:
+            raise ValueError("Bar values must be finite and non-negative")
         self.values[index] = value
 
     def update(self, dt):
+        dt = max(0, dt)
         for i, value in enumerate(self.values):
             if abs(self.values_displayed[i] - value) < CHANGE_SPEED * dt:
                 self.values_displayed[i] = value
@@ -48,27 +62,35 @@ class BarChart(EasyObject):
             else:
                 self.values_displayed[i] -= CHANGE_SPEED * dt
 
-    def draw_bar(self, screen, index, color=pg.Color("black")):
+    def draw_bar(self, screen, index, color=(0, 0, 0)):
         x, y, width, height = self.rect
         bar_width = width / len(self.values)
         if self.max_value is None:
-            max_height = max(self.values)
+            max_height = max(1, *self.values, *self.values_displayed)
         else:
             max_height = self.max_value
-        bar_height = self.values_displayed[index] / max_height * height
+        fraction = min(1, self.values_displayed[index] / max_height)
+        bar_height = fraction * height
         bar_x = x + index * bar_width
         bar_y = y + height - bar_height
 
-        alpha = max(255 * (self.values_displayed[index] / max_height), 50)
-        draw_transparent_rect_with_border_radius(screen, color,
-                                                 Rect(bar_x + SPACE_BETWEEN_BARS,
-                                                      bar_y,
-                                                      bar_width - 2 * SPACE_BETWEEN_BARS,
-                                                      bar_height),
-                                                 0,
-                                                 alpha)
+        alpha = int(max(255 * fraction, 50))
+        draw_transparent_rect_with_border_radius(
+            screen,
+            color,
+            Rect(
+                bar_x + SPACE_BETWEEN_BARS,
+                bar_y,
+                max(0, bar_width - 2 * SPACE_BETWEEN_BARS),
+                bar_height,
+            ),
+            0,
+            alpha,
+        )
 
     def draw_labels(self, screen):
+        if not self.values:
+            return
         x, y, width, height = self.rect
         bar_width = width / len(self.values)
         font = self.font
@@ -81,8 +103,10 @@ class BarChart(EasyObject):
             text = font.render(text, True, self.labels_color)
             screen.blit(text, text.get_rect(midtop=botmid_bar))
 
-    def draw(self, screen, x, y, width, height):
+    def draw(self, screen, x, y, width=300, height=100):
+        if width < 0 or height < 0:
+            raise ValueError("Chart dimensions must be non-negative")
         self.rect = pg.Rect(x, y, width, height)
-        for i, value in enumerate(self.values_displayed):
+        for i in range(len(self.values_displayed)):
             self.draw_bar(screen, i, color=self.colors[i])
         self.draw_labels(screen)
