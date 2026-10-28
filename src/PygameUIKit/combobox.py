@@ -4,7 +4,7 @@ from collections.abc import Callable
 import pygame as pg
 from pygame import Color
 
-from .button import ButtonText
+from .button import Button
 from .label import Label
 from .utils import draw_transparent_rect_with_border_radius, load_image
 
@@ -13,22 +13,22 @@ PADDING = 10
 cwd = os.path.dirname(__file__)
 
 
-class ComboBox(ButtonText):
+class ComboBox(Button):
     def __init__(self, elements: list[str], ui_group=None, font=None, font_color=(0, 0, 0)):
         if not elements:
             raise ValueError("ComboBox requires at least one element")
         super().__init__(
-            ui_group=ui_group,
-            text=elements[0],
-            onclick_f=self.toggle_open,
+            elements[0],
+            self.toggle_open,
+            color="white",
+            text_color=font_color,
             border_radius=5,
-            fixed_width=200,
+            padding=(PADDING, PADDING),
             font=font,
-            font_color=font_color,
-            rect_color=(255, 255, 255),
+            align="left",
+            ui_group=ui_group,
         )
         self.font = self.label.font
-        self.text = elements[0]
         self.elements = elements
         self.selected_index = 0
         self.hovered_index = self.selected_index
@@ -43,20 +43,20 @@ class ComboBox(ButtonText):
         self._pressed_index = None
         self.img_arrow_up = pg.transform.rotate(self.img_arrow_down.copy(), 180)
 
-        self.fixed_width = max(200, max(self.font.size(text)[0] for text in elements) + 50)
-        self.label.bounds.w = self.fixed_width
-        self.render()
+        self.width = max(200, max(self.font.size(text)[0] for text in elements) + 50)
+        self._resize()
         self._render_elements()
 
     def _render_elements(self):
         self._labels.clear()
         for element in self.elements:
-            self._labels.append(Label(element, font=self.font, font_color=Color("white")))
+            self._labels.append(Label(element, "white", font=self.font))
 
     def draw(self, screen, x, y):
         super().draw(screen, x, y)
         img = self.img_arrow_up if self.is_open else self.img_arrow_down
-        screen.blit(img, (x + self.rect.w - self.img_arrow_down.get_width() - PADDING, y + 10))
+        arrow_y = y + (self.rect.h - img.get_height()) // 2
+        screen.blit(img, (x + self.rect.w - img.get_width() - PADDING, arrow_y))
 
         if self.is_open:
             height = self.rect.h * len(self.elements)
@@ -74,7 +74,8 @@ class ComboBox(ButtonText):
                         border_radius=5,
                         alpha=100,
                     )
-                self._labels[i].draw(screen, x, y + self.rect.h * (i + 1))
+                label_y = y + self.rect.h * (i + 1) + PADDING
+                self._labels[i].draw(screen, x + PADDING, label_y)
 
     @property
     def event_priority(self):
@@ -92,7 +93,7 @@ class ComboBox(ButtonText):
         ):
             self.is_open = False
             self._pressed_index = None
-            self.clicked = False
+            self.pressed = False
         if self.is_open and event.type in (pg.MOUSEBUTTONDOWN, pg.MOUSEBUTTONUP, pg.MOUSEMOTION):
             index = self._option_at(event.pos)
             if event.type == pg.MOUSEMOTION:
@@ -125,7 +126,6 @@ class ComboBox(ButtonText):
             raise IndexError("ComboBox index out of range")
         self.selected_index = index
         self.hovered_index = index
-        self.change_text(self.elements[self.selected_index])
         self.text = self.elements[self.selected_index]
         self._render_elements()
         if index in self.actions:

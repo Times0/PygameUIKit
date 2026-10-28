@@ -38,14 +38,13 @@ class Demo:
             ui_group=self.easy_objects,
             font=def_font,
         )
-        self.btn_pause = button.ButtonTwoStates(
-            img_play, img_stop, do_nothing, ui_group=self.easy_objects
+        self.btn_pause = button.IconToggle(
+            img_play, img_stop, self.set_dancing, ui_group=self.easy_objects
         )
-        self.btn_png = button.ButtonPngIcon(
-            img_play, self.change_values, inflate=10, ui_group=self.easy_objects
+        self.btn_png = button.IconButton(img_play, self.change_values, ui_group=self.easy_objects)
+        self.btn_shuffle = button.Button(
+            "Shuffle", self.change_values, color=BTN_BLUE, font=def_font, ui_group=self.easy_objects
         )
-
-        self.btn_pause.connect(self.toggle_dance)
 
         self.slider = slider.Slider(
             0, 100, 1, show_value=True, ui_group=self.easy_objects, font=def_font
@@ -96,6 +95,7 @@ class Demo:
         self.text_input.draw(win, W // 2 - self.text_input.rect.w // 2, H - 200)
         self.btn_pause.draw(win, 100, 200)
         self.btn_png.draw(win, 100, 300)
+        self.btn_shuffle.draw(win, 100, 430)
         self.slider.draw(win, 100, 400, 300, 5)
         self.chart.draw(win, 159, 164, 300, 100)
         self.dropdown.draw(win, 100, 100)
@@ -106,12 +106,8 @@ class Demo:
         new_value = random.randint(0, 100)
         self.chart.change_value(i, new_value)
 
-    def toggle_dance(self):
-        self.dancing = not self.dancing
-
-
-def do_nothing():
-    pass
+    def set_dancing(self, dancing):
+        self.dancing = dancing
 
 
 def main():

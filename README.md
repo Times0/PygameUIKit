@@ -28,19 +28,13 @@ uv installs Python and dependencies automatically. The demo is also included in 
 
 ```python
 import pygame
-from PygameUIKit import Group, button
+from PygameUIKit import Button, Group
 
 pygame.init()
 screen = pygame.display.set_mode((640, 360))
 clock = pygame.time.Clock()
 ui = Group()
-hello = button.ButtonText(
-    "Say hello",
-    lambda: print("Hello!"),
-    rect_color=(85, 145, 92),
-    border_radius=8,
-    ui_group=ui,
-)
+hello = Button("Say hello", lambda: print("Hello!"), color=(85, 145, 92), ui_group=ui)
 
 running = True
 while running:
@@ -62,11 +56,14 @@ pygame.quit()
 
 Add widgets with `ui_group=ui`, forward each event once, and call `ui.update(dt)` with seconds. `ui.handle_event(event)` returns `True` when a widget consumed the event (for example a button click or typing into a focused text input), so you can skip your own handling for it. The group also sets the mouse cursor for the hovered widget. Draw each widget at your chosen position. Sliders accept `draw(screen, x, y, width, height)`; charts use the same layout arguments. Draw dropdowns last so their menus appear above other widgets.
 
-- `button`: text, image, icon, toggle, and thread-status buttons.
+- `Button("Play", on_click, color="seagreen")`: rounded text button sized to its text; set `text` to relabel it. Options: `width` and `align`, `outline_color`, `border_radius`, `padding`, `text_color` (black or white for contrast by default).
+- `ImageButton(image, on_click, hover_image=None, text="")`: an image, optionally with centered text.
+- `IconButton(icon, on_click)`: an icon with a translucent backdrop on hover.
+- `IconToggle(icon_off, icon_on, on_change)`: switches icons on click and calls `on_change(value)`; read or set `value`.
 - `slider.Slider(min, max, step)`: `get_value()` and `connect(callback)`.
 - `combobox.ComboBox(["One", "Two"])`: `get_value()` and `add_action(index, callback)`.
 - `text_input.TextInput(placeholder="Name")`: `get_text()` and `set_text(text)`.
-- `label.Label("Hello", "white")`: update the `text` property.
+- `Label("Hello", "white")`: draws at exactly (x, y); `draw(screen, x, y, width)` aligns it within `width` using `align="left" | "center" | "right"`. Set `text` to change it.
 - `barchart.BarChart([10, 20, 30])`: `change_value(index, value)`; accepts non-negative values.
 
 Text inputs use Pygame's `TEXTINPUT` events for Unicode text and `KEYDOWN` for editing. Forward both through `Group`; don't also forward the same events separately to the input. Pass a custom `pygame.font.Font` if you need a particular font or character set.
