@@ -1,20 +1,6 @@
 import pygame as pg
 from pygame import Color
-
-
-def make_surface_darker(surface: pg.Surface, amount: int = 50) -> pg.Surface:
-    """
-    Make the given surface darker by the given amount.
-    You can make the surface lighter by passing a negative amount.
-    :param surface: The surface to make darker.
-    :param amount: The amount to make the surface darker by.
-    :return: The darker surface.
-    """
-    new_surface = surface.copy()
-    amount = max(-255, min(255, amount))
-    blend = pg.BLEND_RGB_SUB if amount >= 0 else pg.BLEND_RGB_ADD
-    new_surface.fill((abs(amount),) * 3, special_flags=blend)
-    return new_surface
+from pygame.typing import ColorLike
 
 
 def draw_transparent_rect_with_border_radius(screen, color, rect, border_radius, alpha):
@@ -24,14 +10,21 @@ def draw_transparent_rect_with_border_radius(screen, color, rect, border_radius,
     screen.blit(surf, rect)
 
 
-def best_contrast_color(rgb_color: Color | tuple):
-    if isinstance(rgb_color, Color):
-        rgb_color = rgb_color.r, rgb_color.g, rgb_color.b
-    r, g, b = rgb_color[:3]
-    if r + g + b < 500:
-        return 255, 255, 255
-    else:
-        return 0, 0, 0
+def _luma(color: pg.Color) -> float:
+    return 0.299 * color.r + 0.587 * color.g + 0.114 * color.b
+
+
+def best_contrast_color(color: ColorLike) -> Color:
+    """Black or white, whichever reads better on ``color``."""
+    return Color("black") if _luma(Color(color)) >= 150 else Color("white")
+
+
+def shade(color: ColorLike, amount: float) -> Color:
+    """Mix ``color`` toward black (toward white if it is very dark) by ``amount`` in 0..1."""
+    color = Color(color)
+    shaded = color.lerp("white" if _luma(color) < 60 else "black", amount)
+    shaded.a = color.a
+    return shaded
 
 
 def load_image(path, size=None) -> pg.Surface:

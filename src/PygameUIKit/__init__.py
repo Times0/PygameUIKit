@@ -2,16 +2,7 @@
 
 from . import barchart, button, combobox, label, slider, text_input, utils, widget
 from .barchart import BarChart
-from .button import (
-    ButtonImage,
-    ButtonImageText,
-    ButtonPngIcon,
-    ButtonRect,
-    ButtonText,
-    ButtonThreadImage,
-    ButtonThreadText,
-    ButtonTwoStates,
-)
+from .button import Button, IconButton, IconToggle, ImageButton
 from .combobox import ComboBox
 from .label import Label
 from .slider import Slider
@@ -20,16 +11,12 @@ from .widget import Group, Widget
 
 __all__ = [
     "BarChart",
-    "ButtonImage",
-    "ButtonImageText",
-    "ButtonPngIcon",
-    "ButtonRect",
-    "ButtonText",
-    "ButtonThreadImage",
-    "ButtonThreadText",
-    "ButtonTwoStates",
+    "Button",
     "ComboBox",
     "Group",
+    "IconButton",
+    "IconToggle",
+    "ImageButton",
     "Label",
     "Slider",
     "TextInput",
