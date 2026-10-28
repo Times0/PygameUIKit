@@ -27,6 +27,22 @@ def shade(color: ColorLike, amount: float) -> Color:
     return shaded
 
 
+def disabled_color(color: ColorLike) -> Color:
+    """``color`` mostly desaturated and faded toward white: how disabled widgets are drawn."""
+    color = Color(color)
+    grey = round(_luma(color))
+    faded = color.lerp((grey, grey, grey), 0.7).lerp("white", 0.45)
+    faded.a = color.a
+    return faded
+
+
+def disabled_image(image: pg.Surface) -> pg.Surface:
+    """A greyscale, translucent copy of ``image`` to match ``disabled_color``."""
+    faded = pg.transform.grayscale(image)
+    faded.set_alpha(140)
+    return faded
+
+
 def load_image(path, size=None) -> pg.Surface:
     image = pg.image.load(path)
     if size is not None:

@@ -28,7 +28,7 @@ from PygameUIKit import (
     TextInput,
 )
 
-SIZE = (1100, 720)
+SIZE = (1100, 800)
 ASSETS = Path(__file__).parent / "assets"
 
 BACKGROUND = (241, 243, 246)
@@ -44,7 +44,7 @@ RED = (220, 38, 38)
 MARGIN, GAP, PAD = 24, 16, 16
 HEADER = 60
 COLUMNS = 3
-ROWS = (202, 158, 244)  # card heights, top to bottom
+ROWS = (202, 158, 124, 184)  # card heights, top to bottom
 
 PALETTES = {
     "Ocean": ["#0e7490", "#0891b2", "#06b6d4", "#22d3ee", "#67e8f9", "#0369a1"],
@@ -54,12 +54,13 @@ PALETTES = {
 }
 
 
-def cell(column: int, row: int, columns: int = 1) -> pg.Rect:
-    """The rectangle of the card at ``column``, ``row`` spanning ``columns`` grid columns."""
+def cell(column: int, row: int, columns: int = 1, rows: int = 1) -> pg.Rect:
+    """The rectangle of the card at ``column``, ``row`` spanning ``columns`` and ``rows``."""
     width = (SIZE[0] - 2 * MARGIN - (COLUMNS - 1) * GAP) // COLUMNS
     top = HEADER + sum(ROWS[:row]) + row * GAP
+    height = sum(ROWS[row : row + rows]) + (rows - 1) * GAP
     return pg.Rect(
-        MARGIN + column * (width + GAP), top, columns * width + (columns - 1) * GAP, ROWS[row]
+        MARGIN + column * (width + GAP), top, columns * width + (columns - 1) * GAP, height
     )
 
 
@@ -226,6 +227,31 @@ class Demo:
         ]
         self.animation_timer = 0.0
 
+        # States: every widget has ``enabled`` and ``visible``. Two buttons flip them for
+        # these widgets, at least one from each interactive card.
+        self.showcase = [
+            *self.color_buttons,
+            self.icon_button,
+            self.animate,
+            self.image_button,
+            self.int_slider,
+            self.text_input,
+            self.palette,
+        ]
+        state_width = (cell(2, 2).w - 2 * PAD - 8) // 2
+        self.disable = Button(
+            "Disable widgets", self.on_disable, width=state_width, font=font, ui_group=ui
+        )
+        self.hide = Button(
+            "Hide widgets",
+            self.on_hide,
+            color="white",
+            outline_color=BORDER,
+            width=state_width,
+            font=font,
+            ui_group=ui,
+        )
+
         self.log_empty = Label("Interact with a widget...", MUTED, font=self.code_font)
 
         # The layout lives here. Cards are drawn in this order, so the Dropdown card comes
@@ -239,10 +265,11 @@ class Demo:
             Card(
                 "BarChart",
                 "BarChart(values, labels=..., max_value=100)",
-                cell(0, 2, 2),
+                cell(0, 2, 2, 2),
                 self.draw_chart,
             ),
-            Card("Event log", "on_click() / on_change(value)", cell(2, 2), self.draw_log),
+            Card("States", "widget.enabled / widget.visible", cell(2, 2), self.draw_states),
+            Card("Event log", "on_click() / on_change(value)", cell(2, 3), self.draw_log),
             Card("Dropdown", "Dropdown(options, on_change=...)", cell(2, 1), self.draw_dropdown),
         ]
 
@@ -280,6 +307,20 @@ class Demo:
     def on_randomize(self) -> None:
         self.randomize_chart()
         self.log('Button("Randomize").on_click()')
+
+    def on_disable(self) -> None:
+        enabled = not self.showcase[0].enabled
+        for widget in self.showcase:
+            widget.enabled = enabled
+        self.disable.text = "Disable widgets" if enabled else "Enable widgets"
+        self.log(f"widget.enabled = {enabled}")
+
+    def on_hide(self) -> None:
+        visible = not self.showcase[0].visible
+        for widget in self.showcase:
+            widget.visible = visible
+        self.hide.text = "Hide widgets" if visible else "Show widgets"
+        self.log(f"widget.visible = {visible}")
 
     def randomize_chart(self) -> None:
         self.chart.values = [random.randint(5, 100) for _ in self.chart.values]
@@ -381,13 +422,18 @@ class Demo:
         for i, hint in enumerate(self.chart_hints):
             hint.draw(surface, x, self.randomize.rect.bottom + 14 + i * 22)
 
+    def draw_states(self, surface: pg.Surface, area: pg.Rect) -> None:
+        self.disable.draw(surface, area.x, area.y)
+        self.hide.draw(surface, self.disable.rect.right + 8, area.y)
+
     def draw_log(self, surface: pg.Surface, area: pg.Rect) -> None:
         if not self.events:
             self.log_empty.draw(surface, area.x, area.y)
+        line_height = self.code_font.get_height() + 1
         surface.set_clip(area)
-        for i, event in enumerate(self.events):
+        for i, event in enumerate(list(self.events)[-(area.h // line_height) :]):
             text = self.code_font.render(event, True, INK)
-            surface.blit(text, (area.x, area.y + i * (self.code_font.get_height() + 1)))
+            surface.blit(text, (area.x, area.y + i * line_height))
         surface.set_clip(None)
 
 

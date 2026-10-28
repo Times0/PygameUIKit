@@ -37,3 +37,25 @@ def test_demo_screenshot(tmp_path):
     path = tmp_path / "demo.png"
     demo.main(["--screenshot", str(path)])
     assert pg.image.load(path).get_size() == demo.SIZE
+
+
+def test_demo_disables_and_hides_the_showcase_widgets():
+    app = demo.Demo()
+    app.draw()
+    click(app, app.disable)
+    assert not any(widget.enabled for widget in app.showcase)
+    assert app.disable.text == "Enable widgets"
+    click(app, app.text_input)
+    assert not app.text_input.focused
+    click(app, app.hide)
+    app.draw()
+    assert not any(widget.visible for widget in app.showcase)
+    click(app, app.disable)
+    click(app, app.hide)
+    assert all(widget.enabled and widget.visible for widget in app.showcase)
+    assert list(app.events) == [
+        "widget.enabled = False",
+        "widget.visible = False",
+        "widget.enabled = True",
+        "widget.visible = True",
+    ]

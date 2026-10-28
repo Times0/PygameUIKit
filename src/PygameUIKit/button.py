@@ -19,8 +19,10 @@ class _Clickable(Widget):
         self.pressed = False
 
     def handle_event(self, event: pg.event.Event) -> bool:
+        if not self.interactive:
+            return False
         if event.type == pg.WINDOWFOCUSLOST:
-            self.pressed = self.hovered = False
+            self._reset()
         elif event.type == pg.MOUSEMOTION:
             self.hovered = self.rect.collidepoint(event.pos)
         elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
@@ -32,6 +34,10 @@ class _Clickable(Widget):
                 self._activate()
                 return True
         return False
+
+    def _reset(self) -> None:
+        super()._reset()
+        self.pressed = False
 
     def _activate(self) -> None:
         if self.on_click is not None:
@@ -97,6 +103,8 @@ class Button(_Clickable):
         self.rect.size = (self.width or text_width + 2 * pad_x, text_height + 2 * pad_y)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         self._resize()
         self.rect.topleft = (x, y)
         if self.pressed:
@@ -105,12 +113,12 @@ class Button(_Clickable):
             fill = utils.shade(self.color, 0.12)
         else:
             fill = self.color
-        pg.draw.rect(surface, fill, self.rect, border_radius=self.border_radius)
+        pg.draw.rect(surface, self._paint(fill), self.rect, border_radius=self.border_radius)
         if self.outline_color is not None:
-            pg.draw.rect(
-                surface, self.outline_color, self.rect, 2, border_radius=self.border_radius
-            )
+            outline = self._paint(self.outline_color)
+            pg.draw.rect(surface, outline, self.rect, 2, border_radius=self.border_radius)
         self.label.color = self._text_color()
+        self.label.enabled = self.enabled
         pad_x = self.padding[0]
         label_y = y + (self.rect.h - self.label.surface.get_height()) // 2
         self.label.draw(surface, x + pad_x, label_y, self.rect.w - 2 * pad_x)
@@ -148,11 +156,14 @@ class ImageButton(_Clickable):
         self.label.text = value
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         image = self.image
         if self.hover_image is not None and (self.hovered or self.pressed):
             image = self.hover_image
         self.rect = image.get_rect(topleft=(x, y))
-        surface.blit(image, self.rect)
+        surface.blit(image if self.enabled else utils.disabled_image(image), self.rect)
+        self.label.enabled = self.enabled
         label_y = self.rect.centery - self.label.surface.get_height() // 2
         self.label.draw(surface, x, label_y, self.rect.w)
 
@@ -189,6 +200,8 @@ class IconButton(_Clickable):
         self.rect = pg.Rect(0, 0, width + 2 * padding, height + 2 * padding)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         width, height = self.image.get_size()
         self.rect = pg.Rect(x, y, width + 2 * self.padding, height + 2 * self.padding)
         if self.hovered or self.pressed:
@@ -196,7 +209,8 @@ class IconButton(_Clickable):
             utils.draw_transparent_rect_with_border_radius(
                 surface, self.hover_color, self.rect, self.border_radius, alpha
             )
-        surface.blit(self.image, (x + self.padding, y + self.padding))
+        image = self.image if self.enabled else utils.disabled_image(self.image)
+        surface.blit(image, (x + self.padding, y + self.padding))
 
 
 class IconToggle(IconButton):
@@ -238,5 +252,7 @@ class IconToggle(IconButton):
             self.on_change(self.value)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         self.image = self.image_on if self.value else self.image_off
         super().draw(surface, x, y)

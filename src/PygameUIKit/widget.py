@@ -8,16 +8,56 @@ class Widget:
 
     Subclasses draw themselves with ``draw(surface, x, y, ...)`` each frame and store the
     drawn area in ``rect``. Pass ``ui_group=group`` to receive events through a ``Group``.
+    Set ``enabled = False`` to grey a widget out and ``visible = False`` to hide it; either
+    way it ignores events. Subclasses start ``handle_event`` with
+    ``if not self.interactive: return False`` and ``draw`` with ``if not self.visible: return``.
     """
 
     cursor: int | None = None
     event_priority: int = 0
+    _enabled = True
+    _visible = True
 
     def __init__(self, *, ui_group: "Group | None" = None):
         self.rect = pg.Rect(0, 0, 0, 0)
         self.hovered = False
         if ui_group is not None:
             ui_group.add(self)
+
+    @property
+    def enabled(self) -> bool:
+        """Disabled widgets are drawn greyed out and ignore events."""
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool) -> None:
+        self._enabled = bool(value)
+        if not value:
+            self._reset()
+
+    @property
+    def visible(self) -> bool:
+        """Hidden widgets draw nothing and ignore events."""
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        self._visible = bool(value)
+        if not value:
+            self._reset()
+
+    @property
+    def interactive(self) -> bool:
+        """True when the widget is enabled and visible, so it reacts to events."""
+        return self._enabled and self._visible
+
+    def _reset(self) -> None:
+        """Drop hover, press, drag, focus and open menus: when disabled, hidden or unfocused."""
+        self.hovered = False
+
+    def _paint(self, color: pg.Color) -> pg.Color:
+        """``color``, greyed out while the widget is disabled."""
+        return color if self._enabled else utils.disabled_color(color)
 
     def handle_event(self, event: pg.event.Event) -> bool:
         """Handle one event; return True if it was consumed."""
@@ -59,22 +99,25 @@ class Group:
 
         A widget consumes ``MOUSEMOTION`` when the pointer is over it and it covers what is
         below (an open dropdown menu), so the remaining widgets are marked not hovered.
+        Disabled and hidden widgets ignore every event.
         """
         consumed = False
         for widget in self._by_priority():
-            if not consumed:
+            if not consumed and widget.interactive:
                 consumed = widget.handle_event(event)
             elif event.type == pg.MOUSEMOTION:
                 widget.hovered = False
-        if event.type == pg.MOUSEMOTION:
-            self._update_cursor()
+        self._update_cursor()
         return consumed
 
     def update(self, dt: float) -> None:
         for widget in tuple(self.widgets):
             widget.update(dt)
+        self._update_cursor()
 
     def _update_cursor(self) -> None:
+        # Also runs after clicks and updates, so disabling or hiding the widget under the
+        # pointer gives the arrow back without waiting for the mouse to move.
         cursor = next(
             (w.cursor for w in self._by_priority() if w.hovered and w.cursor is not None),
             pg.SYSTEM_CURSOR_ARROW,

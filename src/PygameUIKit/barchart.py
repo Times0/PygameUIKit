@@ -93,6 +93,8 @@ class BarChart(Widget):
     def draw(
         self, surface: pg.Surface, x: int, y: int, width: int = 300, height: int = 100
     ) -> None:
+        if not self.visible:
+            return
         if width < 0 or height < 0:
             raise ValueError("Chart dimensions must be non-negative")
         self.rect = pg.Rect(x, y, width, height)
@@ -107,9 +109,9 @@ class BarChart(Widget):
             bar_height = round(min(1, shown / scale) * height)
             left = round(x + i * slot + BAR_GAP / 2)
             bar = pg.Rect(left, y + height - bar_height, max(0, round(slot - BAR_GAP)), bar_height)
-            color = self.colors[i % len(self.colors)]
+            color = self._paint(self.colors[i % len(self.colors)])
             pg.draw.rect(surface, color, bar, border_top_left_radius=3, border_top_right_radius=3)
             if i < len(labels):
-                text = self.font.render(labels[i], True, self.label_color)
+                text = self.font.render(labels[i], True, self._paint(self.label_color))
                 center = round(x + (i + 0.5) * slot)
                 surface.blit(text, text.get_rect(midtop=(center, y + height + LABEL_GAP)))
