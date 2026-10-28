@@ -3,9 +3,9 @@ import pygame as pg
 from PygameUIKit import demo
 
 
-def click(app, widget):
+def click(app, widget, pos=None):
     for kind in (pg.MOUSEBUTTONDOWN, pg.MOUSEBUTTONUP):
-        app.handle_event(pg.event.Event(kind, pos=widget.rect.center, button=1))
+        app.handle_event(pg.event.Event(kind, pos=pos or widget.rect.center, button=1))
 
 
 def test_demo_runs_a_few_frames():
@@ -59,3 +59,25 @@ def test_demo_disables_and_hides_the_showcase_widgets():
         "widget.enabled = True",
         "widget.visible = True",
     ]
+
+
+def test_demo_choices_drive_the_chart_and_progress_follows():
+    app = demo.Demo()
+    app.draw()
+    click(app, app.animate_box)
+    assert app.animate.value and app.animate_box.value
+    click(app, app.animate)
+    assert not app.animate_box.value
+    click(app, app.values_box)
+    assert app.chart.labels is None
+    click(app, app.speed, app.speed._rows[2].center)
+    assert app.chart.speed == demo.SPEEDS["Fast"]
+    assert list(app.events) == [
+        "Checkbox.on_change(True)",
+        "IconToggle.on_change(False)",
+        "Checkbox.on_change(True)",
+        "RadioGroup.on_change('Fast')",
+    ]
+    app.int_slider.value = 70
+    app.update(0.5)
+    assert app.slider_progress.value == 70 and 0 < app.loading.fraction <= 1
