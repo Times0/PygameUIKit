@@ -4,10 +4,7 @@ import sys
 import pygame as pg
 import pytest
 
-from PygameUIKit import Group, Widget, button, slider, text_input, utils
-from PygameUIKit.barchart import BarChart
-from PygameUIKit.combobox import ComboBox
-from PygameUIKit.label import Label
+from PygameUIKit import BarChart, Dropdown, Group, Label, Widget, button, slider, text_input, utils
 from PygameUIKit.utils import best_contrast_color, lighter_color, load_image, shade
 
 
@@ -35,7 +32,7 @@ def test_import_does_not_initialize_pygame():
         lambda: Label("Hello"),
         lambda: slider.Slider(0, 10, 1),
         lambda: text_input.TextInput(),
-        lambda: ComboBox(["Hello", "World"]),
+        lambda: Dropdown(["Hello", "World"]),
         lambda: BarChart([1, 2]),
     ],
 )
@@ -70,119 +67,6 @@ def test_button_without_callback_and_image_without_hover(display):
     widget.draw(display, 10, 10)
     widget.handle_event(mouse(pg.MOUSEBUTTONDOWN))
     widget.handle_event(mouse(pg.MOUSEBUTTONUP))
-
-
-def test_text_input_through_group_unicode_editing_and_focus(display):
-    group = Group()
-    widget = text_input.TextInput(text="ab", fixed_width=100, ui_group=group)
-    widget.draw(display, 10, 10)
-    group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
-    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_e, unicode="é"))
-    group.handle_event(pg.event.Event(pg.TEXTINPUT, text="é世"))
-    assert widget.get_text() == "abé世"
-    assert widget.caret == 4
-    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_LEFT))
-    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_BACKSPACE))
-    assert widget.get_text() == "ab世"
-    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_DELETE))
-    assert widget.get_text() == "ab"
-    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, (400, 400)))
-    group.handle_event(pg.event.Event(pg.TEXTINPUT, text="ignored"))
-    assert widget.get_text() == "ab"
-
-
-def test_text_input_repeat_and_scroll(display):
-    widget = text_input.TextInput(text="a" * 100, fixed_width=80)
-    widget.draw(display, 10, 10)
-    widget.handle_event(mouse(pg.MOUSEBUTTONDOWN))
-    widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_BACKSPACE))
-    widget.update(0.6)
-    assert len(widget.text) < 99
-    widget.handle_event(pg.event.Event(pg.KEYUP, key=pg.K_BACKSPACE))
-    text = widget.text
-    widget.update(1)
-    assert widget.text == text
-    widget.handle_key(pg.K_HOME)
-    assert widget._scroll == 0
-    widget.handle_key(pg.K_END)
-    assert widget._scroll > 0
-    widget.draw(display, 10, 10)
-
-
-@pytest.mark.parametrize("low,high", [(10, 20), (-10, 0), (-20, -10), (0, 1)])
-def test_slider_uses_actual_range_and_clamps(low, high, display):
-    widget = slider.Slider(low, high, (high - low) / 10)
-    widget.draw(display, 100, 100, 200, 5)
-    assert widget.fraction == 0
-    widget.handle_event(mouse(pg.MOUSEBUTTONDOWN, (200, 102)))
-    assert widget.get_value() == pytest.approx((low + high) / 2)
-    assert widget.fraction == pytest.approx(0.5)
-    widget.handle_event(mouse(pg.MOUSEMOTION, (500, 102)))
-    assert widget.get_value() == high
-    widget.handle_event(mouse(pg.MOUSEBUTTONUP, (0, 102)))
-    assert widget.get_value() == low
-    widget.change_value_to(high + 100)
-    assert widget.get_value() == high
-    widget.draw(display, 100, 100, 200, 5)
-
-
-def test_slider_steps_are_relative_to_minimum():
-    widget = slider.Slider(3, 14, 2)
-    widget.change_value_to(7)
-    assert widget.get_value() == 7
-    widget.change_value_to(100)
-    assert widget.get_value() == 14
-
-
-@pytest.mark.parametrize("args", [(0, 0, 1), (2, 1, 1), (0, 1, 0), (0, 1, -1)])
-def test_slider_rejects_invalid_ranges(args):
-    with pytest.raises(ValueError):
-        slider.Slider(*args)
-
-
-def test_combobox_selection_and_callback_observe_current_value(display):
-    group = Group()
-    widget = ComboBox(["One", "A much longer second option"], ui_group=group)
-    widget.draw(display, 10, 10)
-    assert widget.rect.width >= widget.font.size(widget.elements[1])[0] + 40
-    values = []
-    widget.add_action(1, lambda: values.append((widget.get_value(), widget.text)))
-    group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
-    group.handle_event(mouse(pg.MOUSEBUTTONUP))
-    assert widget.is_open
-    widget.draw(display, 10, 10)
-    pos = (20, 10 + 2 * widget.rect.height + 5)
-    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, pos))
-    group.handle_event(mouse(pg.MOUSEBUTTONUP, pos))
-    assert widget.selected_index == 1
-    assert values == [(widget.elements[1], widget.elements[1])]
-    assert not widget.is_open
-
-
-def test_combobox_rejects_empty_and_bad_indices():
-    with pytest.raises(ValueError):
-        ComboBox([])
-    with pytest.raises(IndexError):
-        ComboBox(["One"]).change_selected(-1)
-
-
-@pytest.mark.parametrize("values", [[], [0], [0, 0], [5, 10]])
-def test_chart_handles_empty_zero_and_narrow_draws(values, display):
-    widget = BarChart(values)
-    widget.draw(display, 0, 0, 2, 100)
-    if values:
-        widget.change_value(0, 100)
-        widget.update(1)
-        widget.draw(display, 0, 0, 300, 100)
-        assert widget.values_displayed[0] == 100
-
-
-@pytest.mark.parametrize(
-    "kwargs", [dict(values=[-1]), dict(values=[1], max_value=0), dict(values=[1], labels=[])]
-)
-def test_chart_validation(kwargs):
-    with pytest.raises(ValueError):
-        BarChart(**kwargs)
 
 
 def test_color_helpers():
@@ -235,7 +119,7 @@ def test_handle_event_reports_consumption(display):
     assert bar.handle_event(mouse(pg.MOUSEBUTTONUP, (160, 102)))
     assert not bar.handle_event(mouse(pg.MOUSEBUTTONUP, (160, 102)))
 
-    field = text_input.TextInput(fixed_width=100)
+    field = text_input.TextInput(width=100)
     field.draw(display, 10, 10)
     assert not field.handle_event(pg.event.Event(pg.TEXTINPUT, text="x"))
     assert field.handle_event(mouse(pg.MOUSEBUTTONDOWN))
@@ -252,14 +136,14 @@ def test_clicking_a_button_unfocuses_text_input(display):
     group = Group()
     calls = []
     btn = button.Button("Click", lambda: calls.append(True), ui_group=group)
-    field = text_input.TextInput(fixed_width=100, ui_group=group)
+    field = text_input.TextInput(width=100, ui_group=group)
     btn.draw(display, 10, 10)
     field.draw(display, 10, 100)
     group.handle_event(mouse(pg.MOUSEBUTTONDOWN, (20, 110)))
-    assert field.active
+    assert field.focused
     group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
     group.handle_event(mouse(pg.MOUSEBUTTONUP))
-    assert not field.active
+    assert not field.focused
     assert calls == [True]
 
 
@@ -268,7 +152,7 @@ def test_group_sets_cursor_of_hovered_widget(display, monkeypatch):
     monkeypatch.setattr(utils, "set_system_cursor", cursors.append)
     group = Group()
     btn = button.Button("Click", ui_group=group)
-    field = text_input.TextInput(fixed_width=100, ui_group=group)
+    field = text_input.TextInput(width=100, ui_group=group)
     Label("Label", ui_group=group).draw(display, 10, 200)
     btn.draw(display, 10, 10)
     field.draw(display, 10, 100)
@@ -292,29 +176,6 @@ def test_widget_base_defaults():
     assert not widget.hovered and widget.cursor is None
     assert not group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
     group.update(0.1)
-
-
-def test_dropdown_consumes_clicks_over_other_widgets(display):
-    group = Group()
-    calls = []
-    underneath = button.Button("Under menu", lambda: calls.append(True), ui_group=group)
-    menu = ComboBox(["First", "Second"], ui_group=group)
-    menu.draw(display, 10, 10)
-    underneath.draw(display, 10, 10 + menu.rect.height)
-    menu.is_open = True
-    pos = (20, underneath.rect.y + 5)
-    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, pos))
-    group.handle_event(mouse(pg.MOUSEBUTTONUP, pos))
-    assert not menu.is_open
-    assert calls == []
-
-
-def test_dropdown_does_not_select_on_unmatched_release(display):
-    menu = ComboBox(["First", "Second"])
-    menu.draw(display, 10, 10)
-    menu.is_open = True
-    menu.handle_event(mouse(pg.MOUSEBUTTONUP, (20, 15 + 2 * menu.rect.height)))
-    assert menu.selected_index == 0
 
 
 def test_button_focus_loss_cancels_click(display):
@@ -481,3 +342,378 @@ def test_label_rerenders_only_on_change():
     assert label.surface is not surface and label.color == pg.Color("blue")
     with pytest.raises(ValueError):
         Label("Hi", align="justify")
+
+
+@pytest.mark.parametrize("low,high", [(10, 20), (-10, 0), (-20, -10), (0, 1)])
+def test_slider_uses_actual_range_and_clamps(low, high, display):
+    values = []
+    widget = slider.Slider(low, high, (high - low) / 10, on_change=values.append)
+    widget.draw(display, 100, 100, 200, 6)
+    assert widget.fraction == 0
+    assert widget.handle_event(mouse(pg.MOUSEBUTTONDOWN, (200, 103)))
+    assert widget.value == pytest.approx((low + high) / 2)
+    assert widget.fraction == pytest.approx(0.5)
+    widget.handle_event(mouse(pg.MOUSEMOTION, (500, 103)))
+    assert widget.value == high
+    assert widget.handle_event(mouse(pg.MOUSEBUTTONUP, (0, 103)))
+    assert widget.value == low
+    assert values == [pytest.approx((low + high) / 2), high, low]
+    widget.value = high + 100
+    assert widget.value == high and len(values) == 3
+    widget.draw(display, 100, 100, 200, 6)
+
+
+def test_slider_steps_are_relative_to_minimum():
+    widget = slider.Slider(3, 14, 2, value=7)
+    assert widget.value == 7
+    widget.value = 8.2
+    assert widget.value == 9
+    widget.value = 100
+    assert widget.value == 14
+    assert slider.Slider(0, 10).value == 0
+
+
+@pytest.mark.parametrize(
+    "args,kwargs",
+    [
+        ((0, 0, 1), {}),
+        ((2, 1, 1), {}),
+        ((0, 1, 0), {}),
+        ((0, 1, -1), {}),
+        ((0, 1), {"value": float("nan")}),
+    ],
+)
+def test_slider_rejects_invalid_arguments_before_joining_group(args, kwargs):
+    group = Group()
+    with pytest.raises(ValueError):
+        slider.Slider(*args, ui_group=group, **kwargs)
+    assert group.widgets == []
+
+
+def test_slider_on_change_fires_only_for_new_values_from_interaction(display):
+    values = []
+    widget = slider.Slider(0, 10, value=4, on_change=values.append)
+    widget.draw(display, 0, 100, 100, 6)
+    widget.value = 6
+    assert values == []
+    widget.handle_event(mouse(pg.MOUSEBUTTONDOWN, (60, 103)))
+    widget.handle_event(mouse(pg.MOUSEMOTION, (61, 103)))
+    widget.handle_event(mouse(pg.MOUSEBUTTONUP, (61, 103)))
+    assert values == []
+    widget.handle_event(mouse(pg.MOUSEBUTTONDOWN, (80, 103)))
+    assert values == [8]
+    widget.handle_event(pg.event.Event(pg.WINDOWFOCUSLOST))
+    widget.handle_event(mouse(pg.MOUSEMOTION, (90, 300)))
+    assert values == [8] and not widget.dragging
+
+
+def test_slider_keys_step_while_hovered(display):
+    values = []
+    widget = slider.Slider(3, 14, 2, value=13, on_change=values.append)
+    widget.draw(display, 0, 100, 100, 6)
+    right = pg.event.Event(pg.KEYDOWN, key=pg.K_RIGHT)
+    assert not widget.handle_event(right)
+    radius = widget._knob_radius()
+    widget.handle_event(mouse(pg.MOUSEMOTION, (50, 103)))
+    assert widget._knob_radius() > radius
+    assert widget.handle_event(right)
+    assert widget.value == 14
+    assert widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_LEFT))
+    assert widget.value == 13
+    widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_HOME))
+    widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_LEFT))
+    assert widget.value == 3
+    widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_END))
+    assert values == [14, 13, 3, 14]
+    assert not widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_a))
+
+
+@pytest.mark.parametrize(
+    "args,value,text",
+    [
+        ((0, 100, 5), 50, "50"),
+        ((0, 1, 0.1), 0.3, "0.3"),
+        ((0, 1, 0.25), 0.5, "0.50"),
+        ((0.5, 10, 1), 2.5, "2.5"),
+        ((0, 1e-4, 1e-5), 3e-5, "0.00003"),
+        ((0, 10, 2.0), 4, "4"),
+    ],
+)
+def test_slider_value_text_uses_step_precision(args, value, text, display):
+    widget = slider.Slider(*args, value=value, show_value=True)
+    assert widget.value_text == text
+    widget.draw(display, 10, 10)
+
+
+def test_slider_snaps_without_float_drift():
+    widget = slider.Slider(0, 1, 0.1)
+    widget._nudge(1)
+    widget._nudge(1)
+    widget._nudge(1)
+    assert widget.value == 0.3
+    assert isinstance(slider.Slider(0, 100, value=42.4).value, int)
+
+
+def test_text_input_through_group_unicode_editing_and_focus(display):
+    group = Group()
+    changes = []
+    widget = text_input.TextInput("ab", width=100, on_change=changes.append, ui_group=group)
+    widget.draw(display, 10, 10)
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    assert widget.focused and widget.event_priority == 1
+    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_e, unicode="é"))
+    group.handle_event(pg.event.Event(pg.TEXTINPUT, text="é世"))
+    assert widget.text == "abé世"
+    assert widget.caret == 4
+    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_LEFT))
+    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_BACKSPACE))
+    assert widget.text == "ab世"
+    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_DELETE))
+    assert widget.text == "ab"
+    group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_DELETE))
+    assert changes == ["abé世", "ab世", "ab"]
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, (400, 400)))
+    assert not widget.focused
+    group.handle_event(pg.event.Event(pg.TEXTINPUT, text="ignored"))
+    assert widget.text == "ab"
+
+
+def test_text_input_repeat_and_scroll(display):
+    widget = text_input.TextInput("a" * 100, width=80)
+    widget.draw(display, 10, 10)
+    widget.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_BACKSPACE))
+    widget.update(0.6)
+    assert len(widget.text) < 99
+    widget.handle_event(pg.event.Event(pg.KEYUP, key=pg.K_BACKSPACE))
+    text = widget.text
+    widget.update(1)
+    assert widget.text == text
+    widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_HOME))
+    assert widget._scroll == 0
+    widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_END))
+    assert widget._scroll > 0
+    assert widget.rect.w == 80
+    widget.draw(display, 10, 10)
+
+
+def test_text_input_enter_submits_and_escape_unfocuses(display):
+    submitted, changes = [], []
+    widget = text_input.TextInput(on_submit=submitted.append, on_change=changes.append)
+    widget.draw(display, 10, 10)
+    enter = pg.event.Event(pg.KEYDOWN, key=pg.K_RETURN)
+    assert not widget.handle_event(enter)
+    widget.focused = True
+    widget.handle_event(pg.event.Event(pg.TEXTINPUT, text="hi"))
+    assert widget.handle_event(enter)
+    assert submitted == ["hi"] and widget.focused
+    assert widget.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_ESCAPE))
+    assert not widget.focused and widget.event_priority == 0
+    assert changes == ["hi"]
+    widget.on_submit = None
+    widget.focused = True
+    widget.handle_event(enter)
+
+
+def test_text_input_text_setter_moves_caret_without_callback(display):
+    changes = []
+    widget = text_input.TextInput("start", placeholder="Name", on_change=changes.append)
+    assert widget.caret == 5
+    widget.draw(display, 10, 10)
+    widget.text = ""
+    widget.draw(display, 10, 10)
+    widget.text = "hello"
+    assert widget.caret == 5 and changes == []
+    assert text_input.TextInput(width=300).rect.w == 300
+
+
+@pytest.mark.parametrize("kwargs", [dict(width=10), dict(border_radius=-1)])
+def test_text_input_validation_happens_before_joining_group(kwargs):
+    group = Group()
+    with pytest.raises(ValueError):
+        text_input.TextInput(ui_group=group, **kwargs)
+    assert group.widgets == []
+
+
+def option_pos(menu, index):
+    return menu._row_rect(index).center
+
+
+def test_dropdown_selection_and_callback_observe_current_value(display):
+    group = Group()
+    widget = Dropdown(["One", "A much longer second option"], ui_group=group)
+    widget.draw(display, 10, 10)
+    assert widget.rect.width >= widget.font.size(widget.options[1])[0] + 30
+    values = []
+    widget.on_change = lambda value: values.append((value, widget.value, widget.index))
+    click(widget)
+    assert widget.is_open and widget.event_priority == 1
+    widget.draw(display, 10, 10)
+    pos = option_pos(widget, 1)
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, pos))
+    group.handle_event(mouse(pg.MOUSEBUTTONUP, pos))
+    assert values == [(widget.options[1], widget.options[1], 1)]
+    assert not widget.is_open and widget.event_priority == 0
+    click(widget)
+    click(widget, option_pos(widget, 1))
+    assert len(values) == 1
+
+
+def test_dropdown_setters_do_not_fire_and_validate():
+    values = []
+    widget = Dropdown(["A", "B", "C"], index=2, on_change=values.append)
+    assert widget.value == "C"
+    widget.index = 0
+    widget.value = "B"
+    assert widget.index == 1 and values == []
+    with pytest.raises(IndexError):
+        widget.index = 3
+    with pytest.raises(ValueError):
+        widget.value = "D"
+    group = Group()
+    for kwargs in (dict(options=[]), dict(options=["A"], width=0)):
+        with pytest.raises(ValueError):
+            Dropdown(ui_group=group, **kwargs)
+    with pytest.raises(IndexError):
+        Dropdown(["A"], index=-1, ui_group=group)
+    assert group.widgets == []
+    assert Dropdown(["A"], width=150).rect.w == 150
+
+
+def test_dropdown_consumes_clicks_over_other_widgets(display):
+    group = Group()
+    calls = []
+    underneath = button.Button("Under menu", lambda: calls.append(True), ui_group=group)
+    menu = Dropdown(["First", "Second"], ui_group=group)
+    menu.draw(display, 10, 10)
+    underneath.draw(display, 10, 10 + menu.rect.height + 8)
+    click(menu)
+    pos = option_pos(menu, 0)
+    assert underneath.rect.collidepoint(pos)
+    assert group.handle_event(mouse(pg.MOUSEBUTTONDOWN, pos))
+    assert group.handle_event(mouse(pg.MOUSEBUTTONUP, pos))
+    assert not menu.is_open
+    assert calls == []
+    click(menu)
+    assert group.handle_event(mouse(pg.MOUSEBUTTONDOWN, pos, button_number=3))
+    assert menu.is_open
+
+
+def test_dropdown_does_not_select_on_unmatched_release(display):
+    menu = Dropdown(["First", "Second"])
+    menu.draw(display, 10, 10)
+    click(menu)
+    assert menu.handle_event(mouse(pg.MOUSEBUTTONUP, option_pos(menu, 1)))
+    assert menu.index == 0 and menu.is_open
+
+
+def test_dropdown_closes_on_outside_click_escape_and_focus_loss(display):
+    group = Group()
+    calls = []
+    menu = Dropdown(["First", "Second"], ui_group=group)
+    outside = button.Button("Outside", lambda: calls.append(True), ui_group=group)
+    menu.draw(display, 10, 10)
+    outside.draw(display, 400, 10)
+    click(menu)
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, (410, 15)))
+    group.handle_event(mouse(pg.MOUSEBUTTONUP, (410, 15)))
+    assert not menu.is_open and calls == [True]
+    escape = pg.event.Event(pg.KEYDOWN, key=pg.K_ESCAPE)
+    assert not menu.handle_event(escape)
+    click(menu)
+    assert menu.handle_event(escape)
+    assert not menu.is_open
+    click(menu)
+    menu.handle_event(pg.event.Event(pg.WINDOWFOCUSLOST))
+    assert not menu.is_open
+
+
+def test_dropdown_keyboard_navigation(display):
+    values = []
+    menu = Dropdown(["A", "B", "C"], on_change=values.append)
+    menu.draw(display, 10, 10)
+    down = pg.event.Event(pg.KEYDOWN, key=pg.K_DOWN)
+    enter = pg.event.Event(pg.KEYDOWN, key=pg.K_RETURN)
+    assert not menu.handle_event(down)
+    click(menu)
+    assert menu.highlighted == 0
+    for _ in range(5):
+        assert menu.handle_event(down)
+    assert menu.highlighted == 2
+    menu.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_UP))
+    menu.draw(display, 10, 10)
+    assert menu.handle_event(enter)
+    assert values == ["B"] and not menu.is_open
+    assert not menu.handle_event(enter)
+
+
+def test_open_dropdown_occludes_hover_and_sets_cursor(display, monkeypatch):
+    cursors = []
+    monkeypatch.setattr(utils, "set_system_cursor", cursors.append)
+    group = Group()
+    field = text_input.TextInput(width=200, ui_group=group)
+    menu = Dropdown(["First", "Second"], ui_group=group)
+    menu.draw(display, 10, 10)
+    field.draw(display, 10, menu.rect.bottom + 8)
+    pos = option_pos(menu, 0)
+    assert field.rect.collidepoint(pos)
+    group.handle_event(mouse(pg.MOUSEMOTION, pos))
+    assert field.hovered and cursors == [pg.SYSTEM_CURSOR_IBEAM]
+    click(menu)
+    assert group.handle_event(mouse(pg.MOUSEMOTION, pos))
+    assert not field.hovered and menu.hovered and menu.highlighted == 0
+    assert cursors[-1] == pg.SYSTEM_CURSOR_HAND
+    menu.draw(display, 10, 10)
+    assert not group.handle_event(mouse(pg.MOUSEMOTION, (500, 500)))
+    assert not menu.hovered and menu.highlighted is None
+    assert cursors[-1] == pg.SYSTEM_CURSOR_ARROW
+
+
+@pytest.mark.parametrize("values", [[], [0], [0, 0], [5, 10]])
+def test_chart_handles_empty_zero_and_narrow_draws(values, display):
+    widget = BarChart(values)
+    widget.draw(display, 0, 0, 2, 100)
+    if values:
+        widget.set_value(0, 100)
+        widget.update(1)
+        widget.draw(display, 0, 0, 300, 100)
+        assert widget.values_displayed[0] == 100
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(values=[-1]),
+        dict(values=[1], max_value=0),
+        dict(values=[1], labels=[]),
+        dict(values=[1], colors=[]),
+        dict(values=[1], speed=0),
+    ],
+)
+def test_chart_validation_happens_before_joining_group(kwargs):
+    group = Group()
+    with pytest.raises(ValueError):
+        BarChart(ui_group=group, **kwargs)
+    assert group.widgets == []
+    with pytest.raises(ValueError):
+        BarChart([1]).set_value(0, float("inf"))
+
+
+def test_chart_values_setter_and_animation_speed(display):
+    widget = BarChart([10, 20], speed=10)
+    colors = widget.colors
+    widget.values = [30, 0]
+    assert widget.values == (30, 0) and widget.colors == colors
+    widget.update(0.5)
+    assert widget.values_displayed == [15, 15]
+    widget.values = [1, 2, 3]
+    assert widget.values_displayed == [15, 15, 0]
+    assert len(widget.colors) == 3 and widget.colors[:2] != colors
+    widget.update(10)
+    assert widget.values_displayed == [1, 2, 3]
+    custom = BarChart([1], colors=["red"], labels=["A"])
+    custom.values = [1, 2]
+    assert custom.colors == [pg.Color("red")]
+    custom.draw(display, 0, 0)
+    with pytest.raises(ValueError):
+        widget.values = [1, -1]

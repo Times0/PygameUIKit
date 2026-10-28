@@ -1,9 +1,9 @@
 """Composable Pygame UI widgets with explicit drawing and event dispatch."""
 
-from . import barchart, button, combobox, label, slider, text_input, utils, widget
+from . import barchart, button, dropdown, label, slider, text_input, utils, widget
 from .barchart import BarChart
 from .button import Button, IconButton, IconToggle, ImageButton
-from .combobox import ComboBox
+from .dropdown import Dropdown
 from .label import Label
 from .slider import Slider
 from .text_input import TextInput
@@ -12,7 +12,7 @@ from .widget import Group, Widget
 __all__ = [
     "BarChart",
     "Button",
-    "ComboBox",
+    "Dropdown",
     "Group",
     "IconButton",
     "IconToggle",
@@ -23,7 +23,7 @@ __all__ = [
     "Widget",
     "barchart",
     "button",
-    "combobox",
+    "dropdown",
     "label",
     "slider",
     "text_input",

@@ -55,8 +55,17 @@ class Group:
         return sorted(self.widgets, key=lambda widget: widget.event_priority, reverse=True)
 
     def handle_event(self, event: pg.event.Event) -> bool:
-        """Dispatch until a widget consumes the event; return True if one did."""
-        consumed = any(widget.handle_event(event) for widget in self._by_priority())
+        """Dispatch until a widget consumes the event; return True if one did.
+
+        A widget consumes ``MOUSEMOTION`` when the pointer is over it and it covers what is
+        below (an open dropdown menu), so the remaining widgets are marked not hovered.
+        """
+        consumed = False
+        for widget in self._by_priority():
+            if not consumed:
+                consumed = widget.handle_event(event)
+            elif event.type == pg.MOUSEMOTION:
+                widget.hovered = False
         if event.type == pg.MOUSEMOTION:
             self._update_cursor()
         return consumed
