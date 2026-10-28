@@ -4,7 +4,20 @@ import sys
 import pygame as pg
 import pytest
 
-from PygameUIKit import BarChart, Dropdown, Group, Label, Widget, button, slider, text_input, utils
+from PygameUIKit import (
+    BarChart,
+    Checkbox,
+    Dropdown,
+    Group,
+    Label,
+    ProgressBar,
+    RadioGroup,
+    Widget,
+    button,
+    slider,
+    text_input,
+    utils,
+)
 from PygameUIKit.utils import (
     best_contrast_color,
     disabled_color,
@@ -41,6 +54,9 @@ def test_import_does_not_initialize_pygame():
         lambda: text_input.TextInput(),
         lambda: Dropdown(["Hello", "World"]),
         lambda: BarChart([1, 2]),
+        lambda: Checkbox("Hello"),
+        lambda: RadioGroup(["Hello", "World"]),
+        lambda: ProgressBar(0.5, show_text=True),
     ],
 )
 def test_default_fonts_survive_pygame_restart(factory, display):
@@ -225,6 +241,7 @@ def test_click_needs_press_and_release_inside(display):
         lambda: button.ImageButton(pg.Surface((30, 30))),
         lambda: button.IconButton(pg.Surface((30, 30))),
         lambda: button.IconToggle(pg.Surface((30, 30)), pg.Surface((30, 30))),
+        lambda: Checkbox("Hi"),
     ],
 )
 def test_clickables_share_hover_cursor_and_focus_loss(factory, display):
@@ -726,6 +743,136 @@ def test_chart_values_setter_and_animation_speed(display):
         widget.values = [1, -1]
 
 
+def test_checkbox_toggles_on_box_and_label_clicks(display):
+    calls = []
+    box = Checkbox("Sound", on_change=calls.append)
+    box.draw(display, 10, 10)
+    size = box.rect.h
+    assert box.rect.w > 2 * size and box.cursor == pg.SYSTEM_CURSOR_HAND
+    assert click(box, (10 + size // 2, box.rect.centery)) == [True, True]
+    assert box.value and calls == [True]
+    click(box, (box.rect.right - 2, box.rect.centery))
+    assert not box.value and calls == [True, False]
+    assert click(box, (box.rect.right + 5, box.rect.centery)) == [False, False]
+    box.value = True
+    box.text = "Music"
+    assert box.value and calls == [True, False]
+    plain = Checkbox(value=1)
+    plain.draw(display, 10, 50)
+    assert plain.value is True and plain.rect.w == plain.rect.h
+
+
+def test_radio_group_selects_clicked_option(display):
+    calls = []
+    radio = RadioGroup(["Slow", "Normal", "Fast"], index=1, on_change=calls.append)
+    radio.draw(display, 10, 10)
+    rows = radio._rows
+    assert radio.rect == rows[0].unionall(rows[1:]) and rows[1].y > rows[0].bottom
+    assert click(radio, (rows[2].right - 2, rows[2].centery)) == [True, True]
+    assert (radio.index, radio.value, calls) == (2, "Fast", ["Fast"])
+    assert click(radio, (rows[2].x + 2, rows[2].centery)) == [True, True]
+    assert calls == ["Fast"]
+    radio.handle_event(mouse(pg.MOUSEBUTTONDOWN, rows[0].center))
+    radio.handle_event(mouse(pg.MOUSEBUTTONUP, rows[1].center))
+    assert radio.index == 2
+    gap = (rows[0].centerx, rows[0].bottom + 2)
+    assert click(radio, gap) == [False, False]
+    radio.handle_event(mouse(pg.MOUSEMOTION, rows[0].center))
+    assert radio.hovered and radio.highlighted == 0
+    radio.handle_event(mouse(pg.MOUSEMOTION, gap))
+    assert not radio.hovered and radio.highlighted is None
+    radio.on_change = lambda value: calls.append(radio.value)
+    click(radio, rows[0].center)
+    assert calls == ["Fast", "Slow"]
+
+
+def test_radio_group_horizontal_layout(display):
+    radio = RadioGroup(["A", "B"], direction="horizontal", spacing=20)
+    radio.draw(display, 10, 10)
+    first, second = radio._rows
+    assert second.x == first.right + 20 and second.y == first.y
+    assert radio.rect.h == first.h
+
+
+def test_radio_group_setters_do_not_fire_and_validate():
+    calls = []
+    radio = RadioGroup(["A", "B", "C"], index=2, on_change=calls.append)
+    assert radio.value == "C"
+    radio.index = 0
+    radio.value = "B"
+    assert radio.index == 1 and calls == []
+    with pytest.raises(IndexError):
+        radio.index = 3
+    with pytest.raises(IndexError):
+        radio.index = -1
+    with pytest.raises(ValueError):
+        radio.value = "D"
+    group = Group()
+    for kwargs in (dict(options=[]), dict(direction="diagonal"), dict(spacing=-1)):
+        with pytest.raises(ValueError):
+            RadioGroup(**{"options": ["A"], **kwargs}, ui_group=group)
+    with pytest.raises(IndexError):
+        RadioGroup(["A"], index=1, ui_group=group)
+    assert group.widgets == []
+
+
+def test_progress_bar_clamps_and_reports_fraction(display):
+    bar = ProgressBar(2)
+    assert bar.value == 1 and bar.fraction == 1 and bar.percent_text == "100%"
+    bar.value = -3
+    assert bar.value == 0 and bar.fraction == 0
+    bar = ProgressBar(25, max_value=50, color="red", track_color="black")
+    assert bar.fraction == 0.5 and bar.percent_text == "50%"
+    bar.max_value = 20
+    assert bar.fraction == 1
+    bar.max_value = 100
+    display.fill("white")
+    bar.draw(display, 10, 10, width=100, height=10)
+    assert bar.rect == pg.Rect(10, 10, 100, 10)
+    assert display.get_at((30, 15)) == pg.Color("red")
+    assert display.get_at((50, 15)) == pg.Color("black")
+    assert not bar.handle_event(mouse(pg.MOUSEBUTTONDOWN, (30, 15))) and bar.cursor is None
+    with pytest.raises(ValueError):
+        bar.value = float("nan")
+    with pytest.raises(ValueError):
+        bar.draw(display, 0, 0, width=0)
+    group = Group()
+    for kwargs in (dict(max_value=0), dict(max_value=float("inf")), dict(border_radius=-1)):
+        with pytest.raises(ValueError):
+            ProgressBar(ui_group=group, **kwargs)
+    with pytest.raises(ValueError):
+        ProgressBar(float("nan"), ui_group=group)
+    assert group.widgets == []
+
+
+@pytest.mark.parametrize("state", ["enabled", "visible"])
+def test_disabled_or_hidden_choices_ignore_clicks_and_reset(state, display):
+    calls = []
+    group = Group()
+    box = Checkbox("Sound", on_change=calls.append, ui_group=group)
+    radio = RadioGroup(["A", "B"], on_change=calls.append, ui_group=group)
+    box.draw(display, 10, 10)
+    radio.draw(display, 10, 50)
+    target = radio._rows[1].center
+    for widget, pos in ((box, box.rect.center), (radio, target)):
+        widget.handle_event(mouse(pg.MOUSEMOTION, pos))
+        widget.handle_event(mouse(pg.MOUSEBUTTONDOWN, pos))
+    assert box.pressed and radio.highlighted == 1 and radio.hovered
+    for widget in (box, radio):
+        setattr(widget, state, False)
+    assert not box.pressed and not box.hovered
+    assert radio.highlighted is None and not radio.hovered
+    for widget, pos in ((box, box.rect.center), (radio, target)):
+        assert not any(click(widget, pos))
+        group.handle_event(mouse(pg.MOUSEBUTTONDOWN, pos))
+        group.handle_event(mouse(pg.MOUSEBUTTONUP, pos))
+    assert not box.value and radio.index == 0 and calls == []
+    setattr(radio, state, True)
+    assert not radio.handle_event(mouse(pg.MOUSEBUTTONUP, target))
+    click(radio, target)
+    assert calls == ["B"]
+
+
 def interactive_widgets(group, calls):
     return [
         button.Button("Click", lambda: calls.append("click"), ui_group=group),
@@ -795,6 +942,10 @@ def test_disabling_or_hiding_clears_interaction_state(state, display):
         lambda: text_input.TextInput("Hello"),
         lambda: Dropdown(["Hello", "World"]),
         lambda: BarChart([1, 2], labels=["A", "B"]),
+        lambda: Checkbox("Hello"),
+        lambda: Checkbox(value=True),
+        lambda: RadioGroup(["Hello", "World"], direction="horizontal"),
+        lambda: ProgressBar(0.5, show_text=True),
     ],
 )
 def test_hidden_widgets_draw_nothing_and_disabled_ones_draw_dimmed(factory, display):

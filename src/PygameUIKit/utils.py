@@ -10,6 +10,22 @@ def draw_transparent_rect_with_border_radius(screen, color, rect, border_radius,
     screen.blit(surf, rect)
 
 
+def draw_rounded_rect(surface: pg.Surface, color: ColorLike, rect: pg.Rect, radius: int) -> None:
+    """A filled rectangle with antialiased rounded corners."""
+    radius = min(radius, rect.w // 2, rect.h // 2)
+    if radius < 1:
+        pg.draw.rect(surface, color, rect)
+        return
+    pg.draw.rect(surface, color, rect.inflate(-2 * radius, 0))
+    pg.draw.rect(surface, color, rect.inflate(0, -2 * radius))
+    left, top = rect.x + radius, rect.y + radius
+    right, bottom = rect.right - radius - 1, rect.bottom - radius - 1
+    pg.draw.aacircle(surface, color, (left, top), radius, draw_top_left=True)
+    pg.draw.aacircle(surface, color, (right, top), radius, draw_top_right=True)
+    pg.draw.aacircle(surface, color, (left, bottom), radius, draw_bottom_left=True)
+    pg.draw.aacircle(surface, color, (right, bottom), radius, draw_bottom_right=True)
+
+
 def _luma(color: pg.Color) -> float:
     return 0.299 * color.r + 0.587 * color.g + 0.114 * color.b
 
