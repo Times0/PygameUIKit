@@ -55,6 +55,8 @@ class Label(Widget):
         return self._surface
 
     def draw(self, surface: pg.Surface, x: int, y: int, width: int | None = None) -> None:
+        if not self.visible:
+            return
         text = self.surface
         text_width, height = text.get_size()
         width = text_width if width is None else width

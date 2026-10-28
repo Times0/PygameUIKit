@@ -95,6 +95,8 @@ class TextInput(Widget):
         self.focused = False
 
     def handle_event(self, event: pg.event.Event) -> bool:
+        if not self.interactive:
+            return False
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
             self.focused = self.rect.collidepoint(event.pos)
             return self._focused
@@ -167,6 +169,8 @@ class TextInput(Widget):
         self._scroll = min(self._scroll, max(0, self.font.size(self._text)[0] - visible))
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         self.rect.topleft = (x, y)
         box = pg.Surface(self.rect.size, pg.SRCALPHA)
         area = box.get_rect()

@@ -110,6 +110,8 @@ class Slider(Widget):
         self._change(self.min + (position + steps) * self.step)
 
     def handle_event(self, event: pg.event.Event) -> bool:
+        if not self.interactive:
+            return False
         if event.type == pg.WINDOWFOCUSLOST:
             self._reset()
         elif event.type == pg.MOUSEMOTION:
@@ -136,6 +138,8 @@ class Slider(Widget):
         return False
 
     def draw(self, surface: pg.Surface, x: int, y: int, width: int = 200, height: int = 6) -> None:
+        if not self.visible:
+            return
         if width <= 0 or height <= 0:
             raise ValueError("Slider dimensions must be positive")
         self.rect = pg.Rect(x, y, width, height)

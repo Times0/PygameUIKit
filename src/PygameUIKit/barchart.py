@@ -93,6 +93,8 @@ class BarChart(Widget):
     def draw(
         self, surface: pg.Surface, x: int, y: int, width: int = 300, height: int = 100
     ) -> None:
+        if not self.visible:
+            return
         if width < 0 or height < 0:
             raise ValueError("Chart dimensions must be non-negative")
         self.rect = pg.Rect(x, y, width, height)

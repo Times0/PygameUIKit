@@ -135,6 +135,8 @@ class Dropdown(Widget):
                 self.on_change(self.value)
 
     def handle_event(self, event: pg.event.Event) -> bool:
+        if not self.interactive:
+            return False
         if event.type == pg.WINDOWFOCUSLOST:
             self._reset()
         elif event.type == pg.MOUSEMOTION:
@@ -189,6 +191,8 @@ class Dropdown(Widget):
             pg.draw.rect(surface, outline, rect, 1, border_radius=self.border_radius)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         self.rect = pg.Rect(x, y, self._width(), self.font.get_height() + 2 * PAD_Y)
         if self._pressed == HEADER:
             fill = utils.shade(self.color, 0.25)

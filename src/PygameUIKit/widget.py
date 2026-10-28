@@ -1,25 +1,6 @@
-from functools import wraps
-
 import pygame as pg
 
 from . import utils
-
-
-def _ignored_while_inactive(handle_event):
-    @wraps(handle_event)
-    def wrapper(self: "Widget", event: pg.event.Event) -> bool:
-        return self.enabled and self.visible and handle_event(self, event)
-
-    return wrapper
-
-
-def _skipped_while_hidden(draw):
-    @wraps(draw)
-    def wrapper(self: "Widget", *args, **kwargs) -> None:
-        if self.visible:
-            draw(self, *args, **kwargs)
-
-    return wrapper
 
 
 class Widget:
@@ -28,20 +9,14 @@ class Widget:
     Subclasses draw themselves with ``draw(surface, x, y, ...)`` each frame and store the
     drawn area in ``rect``. Pass ``ui_group=group`` to receive events through a ``Group``.
     Set ``enabled = False`` to grey a widget out and ``visible = False`` to hide it; either
-    way it ignores events. Every subclass's ``handle_event`` and ``draw`` get these checks.
+    way it ignores events. Subclasses start ``handle_event`` with
+    ``if not self.interactive: return False`` and ``draw`` with ``if not self.visible: return``.
     """
 
     cursor: int | None = None
     event_priority: int = 0
     _enabled = True
     _visible = True
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if "handle_event" in vars(cls):
-            cls.handle_event = _ignored_while_inactive(cls.handle_event)
-        if "draw" in vars(cls):
-            cls.draw = _skipped_while_hidden(cls.draw)
 
     def __init__(self, *, ui_group: "Group | None" = None):
         self.rect = pg.Rect(0, 0, 0, 0)
@@ -70,6 +45,11 @@ class Widget:
         self._visible = bool(value)
         if not value:
             self._reset()
+
+    @property
+    def interactive(self) -> bool:
+        """True when the widget is enabled and visible, so it reacts to events."""
+        return self._enabled and self._visible
 
     def _reset(self) -> None:
         """Drop hover, press, drag, focus and open menus: when disabled, hidden or unfocused."""
@@ -123,7 +103,7 @@ class Group:
         """
         consumed = False
         for widget in self._by_priority():
-            if not consumed:
+            if not consumed and widget.interactive:
                 consumed = widget.handle_event(event)
             elif event.type == pg.MOUSEMOTION:
                 widget.hovered = False

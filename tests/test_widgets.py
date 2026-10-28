@@ -1,4 +1,3 @@
-import inspect
 import subprocess
 import sys
 
@@ -839,22 +838,22 @@ def test_cursor_resets_when_the_hovered_widget_is_disabled_or_hidden(display, mo
     assert cursors == [pg.SYSTEM_CURSOR_HAND, pg.SYSTEM_CURSOR_ARROW] * 2
 
 
-def test_custom_widgets_get_the_state_checks(display):
+def test_group_skips_inactive_custom_widgets():
+    calls = []
+
     class Box(Widget):
         def handle_event(self, event):
+            calls.append(event)
             return True
 
-        def draw(self, surface, x, y, size=10):
-            self.rect = pg.draw.rect(surface, "red", (x, y, size, size))
-
     box = Box()
-    assert box.enabled and box.visible and box.handle_event(mouse(pg.MOUSEMOTION))
+    group = Group(box)
+    assert group.handle_event(mouse(pg.MOUSEMOTION)) and len(calls) == 1
     box.enabled = False
-    assert box.handle_event(mouse(pg.MOUSEMOTION)) is False
+    assert not group.handle_event(mouse(pg.MOUSEMOTION))
     box.enabled, box.visible = True, False
-    box.draw(display, 5, 5)
-    assert box.rect.size == (0, 0)
-    assert list(inspect.signature(Box.draw).parameters) == ["self", "surface", "x", "y", "size"]
+    assert not group.handle_event(mouse(pg.MOUSEMOTION))
+    assert len(calls) == 1 and not box.interactive
 
 
 def test_disabled_color_and_image_helpers():

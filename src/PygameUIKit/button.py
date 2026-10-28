@@ -19,6 +19,8 @@ class _Clickable(Widget):
         self.pressed = False
 
     def handle_event(self, event: pg.event.Event) -> bool:
+        if not self.interactive:
+            return False
         if event.type == pg.WINDOWFOCUSLOST:
             self._reset()
         elif event.type == pg.MOUSEMOTION:
@@ -101,6 +103,8 @@ class Button(_Clickable):
         self.rect.size = (self.width or text_width + 2 * pad_x, text_height + 2 * pad_y)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         self._resize()
         self.rect.topleft = (x, y)
         if self.pressed:
@@ -152,6 +156,8 @@ class ImageButton(_Clickable):
         self.label.text = value
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         image = self.image
         if self.hover_image is not None and (self.hovered or self.pressed):
             image = self.hover_image
@@ -194,6 +200,8 @@ class IconButton(_Clickable):
         self.rect = pg.Rect(0, 0, width + 2 * padding, height + 2 * padding)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         width, height = self.image.get_size()
         self.rect = pg.Rect(x, y, width + 2 * self.padding, height + 2 * self.padding)
         if self.hovered or self.pressed:
@@ -244,5 +252,7 @@ class IconToggle(IconButton):
             self.on_change(self.value)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
+        if not self.visible:
+            return
         self.image = self.image_on if self.value else self.image_off
         super().draw(surface, x, y)
