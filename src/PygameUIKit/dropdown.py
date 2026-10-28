@@ -185,10 +185,10 @@ class Dropdown(Widget):
         return utils.best_contrast_color(self.color)
 
     def _draw_box(self, surface: pg.Surface, rect: pg.Rect, fill: pg.Color) -> None:
-        pg.draw.rect(surface, self._paint(fill), rect, border_radius=self.border_radius)
-        if self.outline_color is not None:
-            outline = self._paint(self.outline_color)
-            pg.draw.rect(surface, outline, rect, 1, border_radius=self.border_radius)
+        outline = None if self.outline_color is None else self._paint(self.outline_color)
+        utils.draw_rounded_rect(
+            surface, self._paint(fill), rect, self.border_radius, outline_color=outline
+        )
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
         if not self.visible:
@@ -222,7 +222,7 @@ class Dropdown(Widget):
             else:
                 fill = self.color
             if fill != self.color:
-                pg.draw.rect(surface, fill, row, border_radius=max(0, self.border_radius - 2))
+                utils.draw_rounded_rect(surface, fill, row, self.border_radius - 2)
             option_label.color = self._text_color(i == self.highlighted)
             label_y = row.centery - option_label.surface.get_height() // 2
             option_label.draw(surface, x + PAD_X, label_y)

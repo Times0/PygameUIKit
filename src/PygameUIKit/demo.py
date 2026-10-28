@@ -18,17 +18,21 @@ import pygame as pg
 from PygameUIKit import (
     BarChart,
     Button,
+    Checkbox,
     Dropdown,
     Group,
     IconButton,
     IconToggle,
     ImageButton,
     Label,
+    ProgressBar,
+    RadioGroup,
     Slider,
     TextInput,
+    utils,
 )
 
-SIZE = (1100, 800)
+SIZE = (1200, 860)
 ASSETS = Path(__file__).parent / "assets"
 
 BACKGROUND = (241, 243, 246)
@@ -44,7 +48,11 @@ RED = (220, 38, 38)
 MARGIN, GAP, PAD = 24, 16, 16
 HEADER = 60
 COLUMNS = 3
-ROWS = (202, 158, 124, 184)  # card heights, top to bottom
+ROWS = (202, 158, 176, 176)  # card heights, top to bottom
+
+DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+SPEEDS = {"Slow": 50, "Normal": 200, "Fast": 800}  # BarChart speed, in values per second
+LOADING_SECONDS = 3
 
 PALETTES = {
     "Ocean": ["#0e7490", "#0891b2", "#06b6d4", "#22d3ee", "#67e8f9", "#0369a1"],
@@ -74,8 +82,7 @@ class Card:
     draw_content: Callable[[pg.Surface, pg.Rect], None]
 
     def draw(self, surface: pg.Surface, title_font: pg.font.Font, code_font: pg.font.Font):
-        pg.draw.rect(surface, CARD, self.rect, border_radius=10)
-        pg.draw.rect(surface, BORDER, self.rect, 1, border_radius=10)
+        utils.draw_rounded_rect(surface, CARD, self.rect, 10, outline_color=BORDER)
         x, y = self.rect.x + PAD, self.rect.y + PAD
         surface.blit(title_font.render(self.title, True, INK), (x, y))
         y += title_font.get_height() + 4
@@ -91,7 +98,8 @@ def badge(size: tuple[int, int], top: pg.typing.ColorLike, bottom: pg.typing.Col
     gradient.set_at((0, 1), bottom)
     image = pg.transform.smoothscale(gradient, size)
     mask = pg.Surface(size, pg.SRCALPHA)
-    pg.draw.rect(mask, "white", mask.get_rect(), border_radius=size[1] // 2)
+    mask.fill((255, 255, 255, 0))
+    utils.draw_rounded_rect(mask, "white", mask.get_rect(), size[1] // 2)
     image.blit(mask, (0, 0), special_flags=pg.BLEND_RGBA_MIN)
     return image
 
@@ -209,7 +217,7 @@ class Demo:
         # BarChart
         self.chart = BarChart(
             [40, 75, 30, 90, 55, 65],
-            labels=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+            labels=DAYS,
             max_value=100,
             colors=PALETTES[self.palette.value],
             font=self.small_font,
@@ -219,13 +227,39 @@ class Demo:
         self.randomize = Button("Randomize", self.on_randomize, font=font, ui_group=ui)
         self.chart_hints = [
             Label(text, MUTED, font=self.small_font)
-            for text in (
-                "Press R (ignored while typing)",
-                "Animate with the IconToggle",
-                "Recolor with the Dropdown",
-            )
+            for text in ("Or press R (not while typing)", "Recolor with the Dropdown")
         ]
         self.animation_timer = 0.0
+
+        # Checkbox and RadioGroup
+        self.animate_box = Checkbox(
+            "Animate chart", on_change=self.on_animate_box, font=font, ui_group=ui
+        )
+        self.values_box = Checkbox(
+            "Show values", on_change=self.on_values_box, font=font, ui_group=ui
+        )
+        self.speed = RadioGroup(
+            list(SPEEDS),
+            index=1,
+            on_change=self.on_speed,
+            direction="horizontal",
+            spacing=16,
+            font=font,
+            ui_group=ui,
+        )
+        self.speed_label = Label("Bar speed", INK, font=font)
+        self.choices_hint = Label(
+            "The IconToggle and the Checkbox stay in sync", MUTED, font=self.small_font
+        )
+
+        # ProgressBar: display only, so it needs no group.
+        self.loading = ProgressBar(show_text=True, font=font)
+        self.loading_time = 1.9  # seconds into the loop, so the first frame shows progress
+        self.slider_progress = ProgressBar(max_value=100, color=GREEN, show_text=True, font=font)
+        self.progress_labels = [Label(text, INK, font=font) for text in ("Loading", "Slider")]
+        self.progress_hint = Label(
+            "The second bar follows the Integer slider", MUTED, font=self.small_font
+        )
 
         # States: every widget has ``enabled`` and ``visible``. Two buttons flip them for
         # these widgets, at least one from each interactive card.
@@ -237,6 +271,9 @@ class Demo:
             self.int_slider,
             self.text_input,
             self.palette,
+            self.animate_box,
+            self.speed,
+            self.loading,
         ]
         state_width = (cell(2, 2).w - 2 * PAD - 8) // 2
         self.disable = Button(
@@ -251,6 +288,9 @@ class Demo:
             font=font,
             ui_group=ui,
         )
+        self.states_hint = Label(
+            "Toggles widgets in every interactive card", MUTED, font=self.small_font
+        )
 
         self.log_empty = Label("Interact with a widget...", MUTED, font=self.code_font)
 
@@ -263,11 +303,13 @@ class Demo:
             Card("Slider", "Slider(0, 100, on_change=...)", cell(0, 1), self.draw_sliders),
             Card("TextInput", "TextInput(on_submit=...)", cell(1, 1), self.draw_text_input),
             Card(
-                "BarChart",
-                "BarChart(values, labels=..., max_value=100)",
-                cell(0, 2, 2, 2),
-                self.draw_chart,
+                "Checkbox and RadioGroup",
+                "Checkbox(text) / RadioGroup(options)",
+                cell(0, 2),
+                self.draw_choices,
             ),
+            Card("ProgressBar", "ProgressBar(value, max_value=1)", cell(0, 3), self.draw_progress),
+            Card("BarChart", "BarChart(values, labels=...)", cell(1, 2, 1, 2), self.draw_chart),
             Card("States", "widget.enabled / widget.visible", cell(2, 2), self.draw_states),
             Card("Event log", "on_click() / on_change(value)", cell(2, 3), self.draw_log),
             Card("Dropdown", "Dropdown(options, on_change=...)", cell(2, 1), self.draw_dropdown),
@@ -294,7 +336,20 @@ class Demo:
         self.log("IconButton.on_click()")
 
     def on_animate(self, value: bool) -> None:
+        self.animate_box.value = value  # setting a value never calls on_change
         self.log(f"IconToggle.on_change({value})")
+
+    def on_animate_box(self, value: bool) -> None:
+        self.animate.value = value
+        self.log(f"Checkbox.on_change({value})")
+
+    def on_values_box(self, value: bool) -> None:
+        self.chart.labels = None if value else DAYS  # without labels, bars show their values
+        self.log(f"Checkbox.on_change({value})")
+
+    def on_speed(self, value: str) -> None:
+        self.chart.speed = SPEEDS[value]
+        self.log(f"RadioGroup.on_change({value!r})")
 
     def on_submit(self, text: str) -> None:
         self.submitted.text = f"Submitted: {text}"
@@ -349,6 +404,10 @@ class Demo:
 
     def update(self, dt: float) -> None:
         self.ui.update(dt)  # animates the chart and repeats held keys in the text input
+        # The loading bar fills in LOADING_SECONDS, stays full (value clamps) and restarts.
+        self.loading_time = (self.loading_time + dt) % (LOADING_SECONDS + 1)
+        self.loading.value = self.loading_time / LOADING_SECONDS
+        self.slider_progress.value = self.int_slider.value
         if self.animate.value:
             self.animation_timer += dt
             if self.animation_timer >= 0.2:
@@ -389,7 +448,7 @@ class Demo:
 
     def draw_labels(self, surface: pg.Surface, area: pg.Rect) -> None:
         box = pg.Rect(area.x, area.y, area.w, 3 * 26 + 8)
-        pg.draw.rect(surface, BACKGROUND, box, border_radius=6)
+        utils.draw_rounded_rect(surface, BACKGROUND, box, 6)
         for i, label in enumerate(self.aligned_labels):
             label.draw(surface, box.x + 10, box.y + 10 + i * 26, box.w - 20)
         self.label_hint.draw(surface, area.x, box.bottom + 10)
@@ -400,7 +459,7 @@ class Demo:
         ):
             y = area.y + 8 + i * 32
             label.draw(surface, area.x, y - label.rect.h // 2 + 3)
-            bar.draw(surface, area.x + 98, y, width=160)
+            bar.draw(surface, area.x + 98, y, width=area.w - 160)
         self.slider_hint.draw(surface, area.x, area.y + 66)
 
     def draw_text_input(self, surface: pg.Surface, area: pg.Rect) -> None:
@@ -415,16 +474,34 @@ class Demo:
         self.palette.draw(surface, area.x + 120, area.y)
 
     def draw_chart(self, surface: pg.Surface, area: pg.Rect) -> None:
-        chart_width = area.w - 240
-        self.chart.draw(surface, area.x, area.y, chart_width, area.h - 24)
-        x = area.x + chart_width + 24
-        self.randomize.draw(surface, x, area.y)
+        self.randomize.draw(surface, area.x, area.bottom - self.randomize.rect.h)
+        x = self.randomize.rect.right + 16
         for i, hint in enumerate(self.chart_hints):
-            hint.draw(surface, x, self.randomize.rect.bottom + 14 + i * 22)
+            hint.draw(surface, x, self.randomize.rect.centery - 15 + i * 17)
+        self.chart.draw(surface, area.x, area.y, area.w, self.randomize.rect.y - area.y - 40)
+
+    def draw_choices(self, surface: pg.Surface, area: pg.Rect) -> None:
+        self.animate_box.draw(surface, area.x, area.y)
+        self.values_box.draw(surface, area.x + area.w // 2, area.y)
+        y = self.animate_box.rect.bottom + 14
+        self.speed_label.draw(surface, area.x, y)
+        self.speed.draw(
+            surface, area.x + 90, y + (self.speed_label.rect.h - self.speed.rect.h) // 2
+        )
+        self.choices_hint.draw(surface, area.x, area.bottom - self.choices_hint.rect.h)
+
+    def draw_progress(self, surface: pg.Surface, area: pg.Rect) -> None:
+        bars = (self.loading, self.slider_progress)
+        for i, (label, bar) in enumerate(zip(self.progress_labels, bars, strict=True)):
+            y = area.y + i * 30
+            label.draw(surface, area.x, y)
+            bar.draw(surface, area.x + 98, label.rect.centery - 6, width=area.w - 160)
+        self.progress_hint.draw(surface, area.x, area.bottom - self.progress_hint.rect.h)
 
     def draw_states(self, surface: pg.Surface, area: pg.Rect) -> None:
         self.disable.draw(surface, area.x, area.y)
         self.hide.draw(surface, self.disable.rect.right + 8, area.y)
+        self.states_hint.draw(surface, area.x, area.bottom - self.states_hint.rect.h)
 
     def draw_log(self, surface: pg.Surface, area: pg.Rect) -> None:
         if not self.events:
