@@ -41,7 +41,7 @@ def load_image(path, size=None) -> pg.Surface:
     return image
 
 
-def ligther_color(color: Color, strength: int = 50) -> Color:
+def lighter_color(color: Color, strength: int = 50) -> Color:
     return Color(color.r, color.g, color.b, max(0, min(255, color.a - strength)))
 
 
@@ -51,3 +51,10 @@ def set_system_cursor(cursor):
         pg.mouse.set_cursor(cursor)
     except pg.error:
         pass
+
+
+def get_font(size: int = 30) -> pg.font.Font:
+    """Create fonts when widgets are constructed, never at import time."""
+    if not pg.font.get_init():
+        pg.font.init()
+    return pg.font.Font(None, size)

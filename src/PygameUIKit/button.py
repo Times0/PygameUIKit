@@ -4,64 +4,43 @@ import pygame as pg
 from pygame import Rect
 from pygame.color import Color
 
-from . import utilis
-from .label import DEFAULT_FONT, Label, TextAlignment
-from .super_object import EasyObject, Group, get_font
+from . import utils
+from .label import Label, TextAlignment
+from .utils import get_font
+from .widget import Group, Widget
 
 
-class EasyButton(EasyObject):
-    def __init__(self, onclick_f, ui_group: Group = None):
+class EasyButton(Widget):
+    """Base for clickable widgets: calls ``onclick_f`` on a left press and release inside."""
+
+    cursor = pg.SYSTEM_CURSOR_HAND
+
+    def __init__(self, onclick_f, ui_group: Group | None = None):
         super().__init__(ui_group=ui_group)
-        self.is_hover = False
         self.clicked = False
         self.onclick_f = onclick_f
-        self.ui_group = ui_group
 
     def is_mouse_on_button(self, pos):
         return self.rect.collidepoint(pos)
 
-    def _on_hover(self):
-        self.on_hover()
-        utilis.set_system_cursor(pg.SYSTEM_CURSOR_HAND)
-
-    def on_hover(self):
-        pass
-
-    def _on_unhover(self):
-        self.on_unhover()
-        utilis.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
-
-    def on_unhover(self):
-        pass
-
-    def handle_events(self, events):
-        for event in events:
-            self.handle_event(event)
-
     def handle_event(self, event):
         if event.type == pg.WINDOWFOCUSLOST:
             self.clicked = False
-            self.is_hover = False
-        if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-            if self.is_mouse_on_button(event.pos):
-                self.clicked = True
-
-        if event.type == pg.MOUSEBUTTONUP and event.button == 1:
+            self.hovered = False
+        elif event.type == pg.MOUSEMOTION:
+            self.hovered = self.is_mouse_on_button(event.pos)
+        elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+            self.clicked = self.is_mouse_on_button(event.pos)
+            return self.clicked
+        elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
             activate = self.clicked and self.is_mouse_on_button(event.pos)
             self.clicked = False
             if activate:
                 self._on_click()
-
-        if event.type == pg.MOUSEMOTION:
-            was_hover = self.is_hover
-            self.is_hover = self.is_mouse_on_button(event.pos)
-            if self.is_hover and not was_hover:
-                self._on_hover()
-            elif not self.is_hover and was_hover:
-                self._on_unhover()
+            return activate
+        return False
 
     def _on_click(self):
-        utilis.set_system_cursor(pg.SYSTEM_CURSOR_ARROW)
         if self.onclick_f is not None:
             self.onclick_f()
 
@@ -106,16 +85,16 @@ class ButtonRect(EasyButton):
         self.rect.topleft = (x, y)
         if self.clicked:
             screen.blit(self.surface_clicked, self.rect)
-        elif self.is_hover:
+        elif self.hovered:
             screen.blit(self.surface_hover, self.rect)
         else:
             screen.blit(self.surface, self.rect)
 
     def render_hover(self):
-        self.surface_hover = utilis.make_surface_darker(self.surface, 30)
+        self.surface_hover = utils.make_surface_darker(self.surface, 30)
 
     def render_clicked(self):
-        self.surface_clicked = utilis.make_surface_darker(self.surface, 50)
+        self.surface_clicked = utils.make_surface_darker(self.surface, 50)
 
 
 class ButtonImage(EasyButton):
@@ -127,7 +106,7 @@ class ButtonImage(EasyButton):
 
     def draw(self, screen, x, y):
         self.rect.topleft = (x, y)
-        if self.is_hover:
+        if self.hovered:
             screen.blit(self.hover_image, self.rect)
         else:
             screen.blit(self.image, self.rect)
@@ -175,8 +154,8 @@ class ButtonPngIcon(ButtonImage):
         self.rect.topleft = (x, y)
 
         # if hover then blit a transparent rect behind the image
-        if self.is_hover or self.clicked:
-            utilis.draw_transparent_rect_with_border_radius(
+        if self.hovered or self.clicked:
+            utils.draw_transparent_rect_with_border_radius(
                 screen,
                 self.hover_color,
                 self.rect.inflate(self.inflate, self.inflate),
@@ -212,7 +191,7 @@ class ButtonThreadImage(ButtonImage):
             image = self.img_success
         elif self.isWorking:
             image = self.image_working
-        elif self.is_hover:
+        elif self.hovered:
             image = self.image_hover
 
         else:
@@ -251,7 +230,7 @@ class ButtonText(ButtonRect):
         onclick_f=None,
         rect_color=(0, 0, 0),
         border_radius=0,
-        font=DEFAULT_FONT,
+        font=None,
         font_color=None,
         outline_color=None,
         fixed_width=None,
@@ -260,7 +239,7 @@ class ButtonText(ButtonRect):
     ):
 
         if font_color is None:
-            font_color = utilis.best_contrast_color(rect_color)
+            font_color = utils.best_contrast_color(rect_color)
         self.fixed_width = fixed_width
 
         if (

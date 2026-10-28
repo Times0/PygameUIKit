@@ -5,8 +5,8 @@ import pygame as pg
 from pygame import Color
 
 from .button import ButtonText
-from .label import DEFAULT_FONT, Label
-from .utilis import draw_transparent_rect_with_border_radius, load_image
+from .label import Label
+from .utils import draw_transparent_rect_with_border_radius, load_image
 
 PADDING = 10
 
@@ -14,7 +14,7 @@ cwd = os.path.dirname(__file__)
 
 
 class ComboBox(ButtonText):
-    def __init__(self, elements: list[str], ui_group=None, font=DEFAULT_FONT, font_color=(0, 0, 0)):
+    def __init__(self, elements: list[str], ui_group=None, font=None, font_color=(0, 0, 0)):
         if not elements:
             raise ValueError("ComboBox requires at least one element")
         super().__init__(
@@ -118,8 +118,7 @@ class ComboBox(ButtonText):
                         self.is_open = False
             elif index is not None:
                 return True
-        super().handle_event(event)
-        return False
+        return super().handle_event(event)
 
     def change_selected(self, index):
         if not 0 <= index < len(self.elements):

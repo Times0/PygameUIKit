@@ -60,7 +60,7 @@ while running:
 pygame.quit()
 ```
 
-Add widgets with `ui_group=ui`, forward each event once, and call `ui.update(dt)` with seconds. Draw each widget at your chosen position. Sliders accept `draw(screen, x, y, width, height)`; charts use the same layout arguments. Draw dropdowns last so their menus appear above other widgets.
+Add widgets with `ui_group=ui`, forward each event once, and call `ui.update(dt)` with seconds. `ui.handle_event(event)` returns `True` when a widget consumed the event (for example a button click or typing into a focused text input), so you can skip your own handling for it. The group also sets the mouse cursor for the hovered widget. Draw each widget at your chosen position. Sliders accept `draw(screen, x, y, width, height)`; charts use the same layout arguments. Draw dropdowns last so their menus appear above other widgets.
 
 - `button`: text, image, icon, toggle, and thread-status buttons.
 - `slider.Slider(min, max, step)`: `get_value()` and `connect(callback)`.

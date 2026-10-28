@@ -10,7 +10,7 @@ from PygameUIKit.barchart import BarChart
 
 #
 #
-# This is a file to showcase every EasyObject
+# This is a file to showcase every widget
 #
 #
 
