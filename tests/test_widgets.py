@@ -1019,3 +1019,17 @@ def test_disabled_color_and_image_helpers():
     assert faded.get_size() == (4, 3) and faded.get_alpha() < 255
     r, g, b, _ = faded.get_at((0, 0))
     assert r == g == b
+
+
+def test_draw_rounded_rect_fill_outline_and_antialiased_corners():
+    surface = pg.Surface((40, 30))
+    surface.fill("white")
+    utils.draw_rounded_rect(surface, "red", pg.Rect(5, 5, 30, 20), 6, outline_color="blue")
+    assert surface.get_at((20, 15)) == pg.Color("red")
+    assert surface.get_at((20, 5)) == pg.Color("blue") and surface.get_at((5, 15)) == pg.Color(
+        "blue"
+    )
+    assert surface.get_at((5, 5)) == pg.Color("white")
+    corner = [surface.get_at((x, y)) for x in range(5, 11) for y in range(5, 11)]
+    assert any(c not in (pg.Color("white"), pg.Color("blue"), pg.Color("red")) for c in corner)
+    utils.draw_rounded_rect(surface, "red", pg.Rect(0, 0, 0, 10), 6)
