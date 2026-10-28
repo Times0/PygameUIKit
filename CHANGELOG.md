@@ -12,7 +12,7 @@
 - Remove `Group.draw`, which drew every widget at the same position.
 - Replace the eight button classes with four: `Button` (rounded text button), `ImageButton`, `IconButton` and `IconToggle`. All click on a left press and release inside the button, cancel on window focus loss, and expose `pressed`.
 - `Button` sizes itself to its text (or a fixed `width` with `align`), derives hover and pressed shades from `color`, picks black or white text for contrast unless `text_color` is given, and defaults to `border_radius=6` and `padding=(16, 8)`. `outline_color` draws a 2 px outline. `button.text` is a property that resizes the button.
-- `Label(text, color="white", *, font=None, align="left")` draws exactly at (x, y); `draw(surface, x, y, width=None)` aligns the text within `width`. Setting `text` or `color` re-renders only when the value changes.
+- `Label(text, color="black", *, font=None, align="left")` draws exactly at (x, y) (the color is now optional); `draw(surface, x, y, width=None)` aligns the text within `width`. Setting `text` or `color` re-renders only when the value changes.
 - `IconButton`'s clickable area and hover backdrop are the icon plus `padding` on each side, starting at (x, y).
 - Add `utils.shade(color, amount)`; `utils.best_contrast_color` uses perceived brightness and returns a `pygame.Color`.
 - Remove the duplicate root `src/demo.py` and `src/assets/`; the packaged `pygameuikit-demo` is the demo.
@@ -21,6 +21,8 @@
 - `Dropdown(options, *, index=0, on_change=None, width=None, font=None, color, text_color, highlight_color, outline_color, border_radius)` replaces `ComboBox`. It draws itself (no longer a `Button` subclass) with a drawn chevron, highlights the hovered and selected options, and can be driven with Up/Down, Enter/Space and Escape while open. While open it consumes mouse events over itself and its menu; a click elsewhere, Escape or window focus loss closes it. `on_change(value)` runs only when the user picks a different option.
 - When a widget consumes a `MOUSEMOTION` (an open dropdown menu under the pointer), `Group` marks the widgets after it as not hovered, so nothing underneath an open menu stays highlighted or sets the cursor.
 - `BarChart(values, *, labels=None, max_value=None, colors=None, font=None, label_color="black", speed=200)`: `values` is a property (a tuple; setting it replaces all bars and regenerates automatic colors when the count changes), `set_value(index, value)` updates one bar, `colors` cycle if there are fewer than bars, and `speed` is the animation rate in value units per second. Bars are solid with rounded tops.
+- The demo (`pygameuikit-demo`) is rewritten as a showcase: one card per widget family with its main options and API, and an event log that shows each callback as it fires. `--screenshot PATH` saves a frame as a PNG and exits without opening a window.
+- The README has a short guide to the main loop and a reference for every widget.
 
 ### Upgrading from 0.2
 
