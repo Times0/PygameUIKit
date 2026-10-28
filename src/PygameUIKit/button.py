@@ -113,10 +113,15 @@ class Button(_Clickable):
             fill = utils.shade(self.color, 0.12)
         else:
             fill = self.color
-        pg.draw.rect(surface, self._paint(fill), self.rect, border_radius=self.border_radius)
-        if self.outline_color is not None:
-            outline = self._paint(self.outline_color)
-            pg.draw.rect(surface, outline, self.rect, 2, border_radius=self.border_radius)
+        outline = None if self.outline_color is None else self._paint(self.outline_color)
+        utils.draw_rounded_rect(
+            surface,
+            self._paint(fill),
+            self.rect,
+            self.border_radius,
+            outline_color=outline,
+            outline_width=2,
+        )
         self.label.color = self._text_color()
         self.label.enabled = self.enabled
         pad_x = self.padding[0]

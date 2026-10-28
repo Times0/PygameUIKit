@@ -172,28 +172,33 @@ class TextInput(Widget):
         if not self.visible:
             return
         self.rect.topleft = (x, y)
-        box = pg.Surface(self.rect.size, pg.SRCALPHA)
-        area = box.get_rect()
-        background = self._paint(self.background_color)
-        pg.draw.rect(box, background, area, border_radius=self.border_radius)
         if self._focused:
             border, thickness = self.focus_color, 2
         else:
             border = utils.shade(self.border_color, 0.25) if self.hovered else self.border_color
             thickness = 1
-        pg.draw.rect(box, self._paint(border), area, thickness, border_radius=self.border_radius)
-        box.set_clip(area.inflate(-2 * PAD_X, 0))
-        text_y = (area.h - self.font.get_height()) // 2
+        utils.draw_rounded_rect(
+            surface,
+            self._paint(self.background_color),
+            self.rect,
+            self.border_radius,
+            outline_color=self._paint(border),
+            outline_width=thickness,
+        )
+        clip = surface.get_clip()
+        surface.set_clip(self.rect.inflate(-2 * PAD_X, 0).clip(clip))
+        text_y = y + (self.rect.h - self.font.get_height()) // 2
         if self._text:
             rendered = self.font.render(self._text, True, self._paint(self.text_color))
-            box.blit(rendered, (PAD_X - self._scroll, text_y))
+            surface.blit(rendered, (x + PAD_X - self._scroll, text_y))
         elif self.placeholder:
             placeholder = self.font.render(
                 self.placeholder, True, self._paint(self.placeholder_color)
             )
-            box.blit(placeholder, (PAD_X, text_y))
+            surface.blit(placeholder, (x + PAD_X, text_y))
         if self._focused:
-            caret_x = PAD_X + self.font.size(self._text[: self.caret])[0] - self._scroll
-            pg.draw.line(box, self.text_color, (caret_x, text_y), (caret_x, area.h - text_y - 1))
+            caret_x = x + PAD_X + self.font.size(self._text[: self.caret])[0] - self._scroll
+            bottom = self.rect.bottom - (text_y - y) - 1
+            pg.draw.line(surface, self.text_color, (caret_x, text_y), (caret_x, bottom))
             pg.key.set_text_input_rect(self.rect)
-        surface.blit(box, self.rect)
+        surface.set_clip(clip)

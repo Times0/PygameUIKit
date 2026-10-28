@@ -88,8 +88,10 @@ class Checkbox(_Clickable):
         else:
             fill = utils.shade("white", 0.08) if self.pressed else pg.Color("white")
             border = self.color if self.hovered or self.pressed else pg.Color(BORDER)
-            utils.draw_rounded_rect(surface, self._paint(border), box, radius)
-            utils.draw_rounded_rect(surface, self._paint(fill), box.inflate(-4, -4), radius - 2)
+            paint = self._paint
+            utils.draw_rounded_rect(
+                surface, paint(fill), box, radius, outline_color=paint(border), outline_width=2
+            )
         if self.text:
             self.label.enabled = self.enabled
             label_y = self.rect.centery - self.label.surface.get_height() // 2

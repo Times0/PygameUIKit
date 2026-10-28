@@ -4,20 +4,48 @@ from pygame.typing import ColorLike
 
 
 def draw_transparent_rect_with_border_radius(screen, color, rect, border_radius, alpha):
+    color = Color(color)
     surf = pg.Surface(rect.size, pg.SRCALPHA)
-    pg.draw.rect(surf, color, surf.get_rect().inflate(-1, -1), border_radius=border_radius)
+    surf.fill((color.r, color.g, color.b, 0))  # antialiased edges blend toward color, not black
+    draw_rounded_rect(surf, color, surf.get_rect(), border_radius)
     surf.set_alpha(alpha)
     screen.blit(surf, rect)
 
 
-def draw_rounded_rect(surface: pg.Surface, color: ColorLike, rect: pg.Rect, radius: int) -> None:
-    """A filled rectangle with antialiased rounded corners."""
+def draw_rounded_rect(
+    surface: pg.Surface,
+    color: ColorLike,
+    rect: pg.Rect,
+    radius: int,
+    *,
+    outline_color: ColorLike | None = None,
+    outline_width: int = 1,
+) -> None:
+    """A filled rectangle with antialiased rounded corners, optionally inside an outline.
+
+    The outline is drawn as the whole shape in ``outline_color`` with the fill inset by
+    ``outline_width`` on top, so the fill should be opaque.
+    """
+    rect = pg.Rect(rect)
+    if outline_color is not None and outline_width > 0:
+        _fill_rounded_rect(surface, outline_color, rect, radius)
+        rect = rect.inflate(-2 * outline_width, -2 * outline_width)
+        radius -= outline_width
+    _fill_rounded_rect(surface, color, rect, radius)
+
+
+def _fill_rounded_rect(surface: pg.Surface, color: ColorLike, rect: pg.Rect, radius: int) -> None:
+    if rect.w <= 0 or rect.h <= 0:
+        return
     radius = min(radius, rect.w // 2, rect.h // 2)
     if radius < 1:
-        pg.draw.rect(surface, color, rect)
+        surface.fill(color, rect)
         return
-    pg.draw.rect(surface, color, rect.inflate(-2 * radius, 0))
-    pg.draw.rect(surface, color, rect.inflate(0, -2 * radius))
+    # Three bands rather than two overlapping rectangles: fill cost grows with the row count.
+    band = pg.Rect(rect.x + radius, rect.y, rect.w - 2 * radius, radius)
+    surface.fill(color, band)
+    surface.fill(color, band.move(0, rect.h - radius))
+    surface.fill(color, rect.inflate(0, -2 * radius))
     left, top = rect.x + radius, rect.y + radius
     right, bottom = rect.right - radius - 1, rect.bottom - radius - 1
     pg.draw.aacircle(surface, color, (left, top), radius, draw_top_left=True)

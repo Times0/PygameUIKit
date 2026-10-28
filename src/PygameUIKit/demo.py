@@ -29,6 +29,7 @@ from PygameUIKit import (
     RadioGroup,
     Slider,
     TextInput,
+    utils,
 )
 
 SIZE = (1200, 860)
@@ -81,8 +82,7 @@ class Card:
     draw_content: Callable[[pg.Surface, pg.Rect], None]
 
     def draw(self, surface: pg.Surface, title_font: pg.font.Font, code_font: pg.font.Font):
-        pg.draw.rect(surface, CARD, self.rect, border_radius=10)
-        pg.draw.rect(surface, BORDER, self.rect, 1, border_radius=10)
+        utils.draw_rounded_rect(surface, CARD, self.rect, 10, outline_color=BORDER)
         x, y = self.rect.x + PAD, self.rect.y + PAD
         surface.blit(title_font.render(self.title, True, INK), (x, y))
         y += title_font.get_height() + 4
@@ -98,7 +98,8 @@ def badge(size: tuple[int, int], top: pg.typing.ColorLike, bottom: pg.typing.Col
     gradient.set_at((0, 1), bottom)
     image = pg.transform.smoothscale(gradient, size)
     mask = pg.Surface(size, pg.SRCALPHA)
-    pg.draw.rect(mask, "white", mask.get_rect(), border_radius=size[1] // 2)
+    mask.fill((255, 255, 255, 0))
+    utils.draw_rounded_rect(mask, "white", mask.get_rect(), size[1] // 2)
     image.blit(mask, (0, 0), special_flags=pg.BLEND_RGBA_MIN)
     return image
 
@@ -447,7 +448,7 @@ class Demo:
 
     def draw_labels(self, surface: pg.Surface, area: pg.Rect) -> None:
         box = pg.Rect(area.x, area.y, area.w, 3 * 26 + 8)
-        pg.draw.rect(surface, BACKGROUND, box, border_radius=6)
+        utils.draw_rounded_rect(surface, BACKGROUND, box, 6)
         for i, label in enumerate(self.aligned_labels):
             label.draw(surface, box.x + 10, box.y + 10 + i * 26, box.w - 20)
         self.label_hint.draw(surface, area.x, box.bottom + 10)
