@@ -25,6 +25,11 @@
 - `Group` updates the cursor after every event and `update(dt)`, not only after mouse motion, so disabling or hiding the widget under the pointer restores the arrow right away.
 - The demo (`pygameuikit-demo`) is rewritten as a showcase: one card per widget family with its main options and API, an event log that shows each callback as it fires, and a States card that disables or hides a set of widgets. `--screenshot PATH` saves a frame as a PNG and exits without opening a window.
 - The README has a short guide to the main loop and a reference for every widget.
+- Add `Checkbox(text="", *, value=False, on_change=None, color, text_color, font=None)`: a box with an antialiased check mark and an optional label; clicking the box or the label toggles `value` and calls `on_change(value)`.
+- Add `RadioGroup(options, *, index=0, on_change=None, direction="vertical", spacing=10, color, text_color, font=None)`: one widget that draws a list of radio options, vertically or horizontally, with `value` and `index` like `Dropdown` and a highlight on the hovered option. `on_change(value)` runs when the user picks a different option.
+- Add `ProgressBar(value=0.0, *, max_value=1.0, color, track_color, border_radius=None, show_text=False, font=None, text_color)`: a display-only bar with a clamped `value`, `fraction` and an optional percentage, drawn with `draw(surface, x, y, width=200, height=12)`.
+- Add `utils.draw_rounded_rect(surface, color, rect, radius)`, a filled rectangle with antialiased corners.
+- The demo has Checkbox and RadioGroup and ProgressBar cards: checkboxes animate the chart (in sync with the IconToggle) and show its values, a horizontal RadioGroup sets the bar speed, and two progress bars loop and follow the Integer slider. The States card also toggles the new widgets. The window is now 1200×860.
 
 ### Upgrading from 0.2
 

@@ -1,6 +1,6 @@
 # PygameUIKit
 
-Small UI widgets for Pygame: buttons, sliders, dropdowns, text inputs, labels, and animated bar charts. You control the layout; the kit handles interaction and drawing.
+Small UI widgets for Pygame: buttons, checkboxes, radio buttons, sliders, dropdowns, text inputs, labels, progress bars, and animated bar charts. You control the layout; the kit handles interaction and drawing.
 
 ![The PygameUIKit demo: cards showing every widget and an event log](https://raw.githubusercontent.com/Times0/PygameUIKit/master/images/img.png)
 
@@ -83,10 +83,13 @@ Options after `*` are keyword-only, and every widget also takes `ui_group`.
 - `ImageButton(image, on_click=None, *, hover_image=None, text="", text_color="white", font=None)`. An image, swapped for `hover_image` while hovered or pressed, with optional centered `text`.
 - `IconButton(image, on_click=None, *, hover_color=(128, 128, 128), hover_alpha=128, padding=6, border_radius=6)`. An icon with a translucent backdrop while hovered. The clickable area is the icon plus `padding`, starting at (x, y).
 - `IconToggle(image_off, image_on, on_change=None, *, value=False, ...)`. Like `IconButton`, but each click switches `value` and the icon. Callback: `on_change(value)` with the new bool.
+- `Checkbox(text="", *, value=False, on_change=None, color=(59, 130, 246), text_color="black", font=None)`. A box with a check mark and an optional label to its right; clicking either toggles `value`. Properties: `value`, `text`. Callback: `on_change(value)` with the new bool.
+- `RadioGroup(options, *, index=0, on_change=None, direction="vertical", spacing=10, color=(59, 130, 246), text_color="black", font=None)`. One widget that draws every option with a radio circle, stacked or in a row (`direction="horizontal"`); `spacing` is the gap between options. Click an option or its circle to select it. `rect` covers all options. Properties: `value` (the option), `index`, `highlighted` (the hovered option's index or `None`). Callback: `on_change(value)` when the user picks a different option.
 - `Slider(min, max, step=1, *, value=None, on_change=None, show_value=False, font=None, fill_color, track_color, knob_color, text_color)`. `draw(surface, x, y, width=200, height=6)`. Drag or click the track; Left/Right, Home and End work while it is hovered. `value` is clamped and snapped to `step`, and `show_value` prints it to the right of the track. Callback: `on_change(value)`.
 - `TextInput(text="", *, placeholder="", width=200, font=None, text_color, placeholder_color, background_color, border_color, focus_color, border_radius=4, on_change=None, on_submit=None)`. A fixed-width, single-line field. Click it to focus it; Enter calls `on_submit(text)` and Escape unfocuses. Properties: `text`, `focused`. Callbacks: `on_change(text)` after each edit, `on_submit(text)`. It reads `TEXTINPUT` events for Unicode text and `KEYDOWN` for editing, so forward both, once, through the group.
 - `Dropdown(options, *, index=0, on_change=None, width=None, font=None, color, text_color, highlight_color, outline_color, border_radius=6)`. Click to open the menu, then pick with the mouse or with Up/Down and Enter. Escape or a click elsewhere closes it. Properties: `value` (the option), `index`, `is_open`. Callback: `on_change(value)` when the user picks a different option.
 - `BarChart(values, *, labels=None, max_value=None, colors=None, font=None, label_color="black", speed=200)`. `draw(surface, x, y, width=300, height=100)`. Bars move toward their values at `speed` units per second during `ui.update(dt)`. `set_value(index, value)` changes one bar; setting `values` replaces them all. Values must be non-negative. Without `labels`, each bar shows its value; without `max_value`, the tallest bar fills the height. `colors` cycle.
+- `ProgressBar(value=0.0, *, max_value=1.0, color=(59, 130, 246), track_color=(220, 223, 228), border_radius=None, show_text=False, font=None, text_color="black")`. `draw(surface, x, y, width=200, height=12)`. Display only: it ignores events and needs no group. `value` is clamped to 0..`max_value`; `fraction` is how full the bar is (0 to 1). `border_radius=None` rounds the ends fully, and `show_text` prints the percentage (`percent_text`) to the right of the bar.
 
 ## Develop
 
