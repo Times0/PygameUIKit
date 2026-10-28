@@ -68,9 +68,10 @@ while running:
 pygame.quit()
 ```
 
-- **Group.** Pass `ui_group=ui` to every interactive widget. Forward each event once with `ui.handle_event(event)`. It returns `True` when a widget used the event (a button click, typing into a focused text input), so check it before your own handling. Call `ui.update(dt)` with seconds every frame; it animates charts and repeats held keys. After mouse motion, the group sets the cursor of the hovered widget.
+- **Group.** Pass `ui_group=ui` to every interactive widget. Forward each event once with `ui.handle_event(event)`. It returns `True` when a widget used the event (a button click, typing into a focused text input), so check it before your own handling. Call `ui.update(dt)` with seconds every frame; it animates charts and repeats held keys. After each event and update, the group sets the cursor of the hovered widget.
 - **Drawing.** There is no layout system. Call `widget.draw(surface, x, y, ...)` every frame. The widget stores the drawn area in `widget.rect`, which is also its clickable area. Draw dropdowns last.
 - **Callbacks.** `on_click()`, `on_change(value)` and `on_submit(text)` are keyword arguments, and attributes you can reassign; `None` means no callback. They run only for user interaction, never when you set `value` or `text` yourself.
+- **States.** Every widget has `enabled` and `visible`, both `True` by default. A disabled widget is drawn greyed out; a hidden one draws nothing. Both ignore events, and turning either off clears hover, press, drag, focus and open menus, so `submit.enabled = False` is all it takes to block a button while work is in progress.
 - **Colors and fonts.** Colors are anything `pygame.Color` accepts. Pass `font=pygame.font.Font(...)` for a particular font or character set; default fonts are created when the widget is.
 
 ### Widgets
