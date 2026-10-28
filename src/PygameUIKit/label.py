@@ -2,9 +2,8 @@ from enum import Enum
 
 import pygame as pg
 
-from .super_object import EasyObject, get_font
-
-DEFAULT_FONT = None  # Kept for callers that imported the old default; resolved lazily.
+from .utils import get_font
+from .widget import Widget
 
 
 class TextAlignment(Enum):
@@ -13,12 +12,14 @@ class TextAlignment(Enum):
     CENTER = "center"
 
 
-class Label(EasyObject):
+class Label(Widget):
+    """Static text: ``Label("Hello", "white").draw(surface, x, y)``; set ``text`` to change it."""
+
     def __init__(
         self,
         text,
         font_color,
-        font=DEFAULT_FONT,
+        font=None,
         text_align=TextAlignment.LEFT,
         bounding_rect=None,
         ui_group=None,
@@ -29,7 +30,6 @@ class Label(EasyObject):
         self.font_color = font_color
         self.font = font if font is not None else get_font()
         self.text_surface: pg.Surface | None = None
-        self.rect: pg.Rect | None = None
         self.text_align = TextAlignment(text_align or TextAlignment.LEFT)
         if self.text_align != TextAlignment.LEFT and self.bounds is None:
             raise ValueError("Center and right alignment require a bounding_rect")
@@ -61,5 +61,4 @@ class Label(EasyObject):
 
     def render_text(self):
         self.text_surface = self.font.render(self.text, True, self.font_color)
-        position = self.rect.topleft if self.rect is not None else (0, 0)
-        self.rect = self.text_surface.get_rect(topleft=position)
+        self.rect = self.text_surface.get_rect(topleft=self.rect.topleft)

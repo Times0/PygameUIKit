@@ -4,8 +4,8 @@ from math import isfinite
 import pygame as pg
 from pygame import Color, Rect
 
-from .super_object import EasyObject, get_font
-from .utilis import draw_transparent_rect_with_border_radius
+from .utils import draw_transparent_rect_with_border_radius, get_font
+from .widget import Widget
 
 CHANGE_SPEED = 200
 SPACE_BETWEEN_BARS = 2
@@ -18,7 +18,9 @@ def color_from_float(colors):
     return new_colors
 
 
-class BarChart(EasyObject):
+class BarChart(Widget):
+    """Animated bars: ``BarChart([10, 20]).draw(surface, x, y, width, height)``."""
+
     def __init__(
         self,
         values: list[int],

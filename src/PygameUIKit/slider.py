@@ -3,8 +3,8 @@ import math
 import pygame
 from pygame import Color
 
-from .label import DEFAULT_FONT
-from .super_object import EasyObject, get_font
+from .utils import get_font
+from .widget import Widget
 
 COLOR_COMPLETED = Color(132, 214, 80)
 COLOR_IN_PROGRESS = Color(200, 200, 200)
@@ -13,14 +13,18 @@ COLOR_CIRCLE1 = Color(241, 241, 241)
 COLOR_CIRCLE2 = COLOR_IN_PROGRESS
 
 
-class Slider(EasyObject):
+class Slider(Widget):
+    """Horizontal value slider: ``Slider(0, 100, 1).draw(surface, x, y, width, height)``."""
+
+    cursor = pygame.SYSTEM_CURSOR_HAND
+
     def __init__(
         self,
         min,
         max,
         step,
         show_value=False,
-        font=DEFAULT_FONT,
+        font=None,
         font_color=(0, 0, 0),
         ui_group=None,
     ):
@@ -42,30 +46,29 @@ class Slider(EasyObject):
 
         self.on_change = lambda: None
 
+    def _hit(self, pos):
+        return self.rect.inflate(self.circle_radius + 10, self.circle_radius + 10).collidepoint(pos)
+
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.rect.inflate(self.circle_radius + 10, self.circle_radius + 10).collidepoint(
-                event.pos
-            ):
-                self.dragging = True
+            self.dragging = self._hit(event.pos)
+            if self.dragging:
                 self._value_from_position(event.pos[0])
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            return self.dragging
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            was_dragging = self.dragging
             if self.dragging:
                 self._value_from_position(event.pos[0])
             self.dragging = False
-        elif event.type == pygame.WINDOWFOCUSLOST:
+            return was_dragging
+        if event.type == pygame.WINDOWFOCUSLOST:
             self.dragging = False
         elif event.type == pygame.MOUSEMOTION:
-            if not self.hovered and self.rect.inflate(
-                self.circle_radius + 10, self.circle_radius + 10
-            ).collidepoint(event.pos):
-                self.on_hover()
-            elif self.hovered and not self.rect.inflate(
-                self.circle_radius + 10, self.circle_radius + 10
-            ).collidepoint(event.pos):
-                self.on_unhover()
+            self.hovered = self._hit(event.pos)
+            self.circle_radius = 12 if self.hovered else 10
             if self.dragging:
                 self._value_from_position(event.pos[0])
+        return False
 
     def _value_from_position(self, x):
         if self.rect.w > 0:
@@ -151,11 +154,3 @@ class Slider(EasyObject):
         """
         if when == "on_change":
             self.on_change = f
-
-    def on_hover(self):
-        self.hovered = True
-        self.circle_radius = 12
-
-    def on_unhover(self):
-        self.hovered = False
-        self.circle_radius = 10

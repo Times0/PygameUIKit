@@ -4,11 +4,11 @@ import sys
 import pygame as pg
 import pytest
 
-from PygameUIKit import Group, button, slider, text_input
+from PygameUIKit import Group, Widget, button, slider, text_input, utils
 from PygameUIKit.barchart import BarChart
 from PygameUIKit.combobox import ComboBox
 from PygameUIKit.label import Label, TextAlignment
-from PygameUIKit.utilis import ligther_color, load_image, make_surface_darker
+from PygameUIKit.utils import lighter_color, load_image, make_surface_darker
 
 
 def mouse(kind, pos=(20, 20), button_number=1):
@@ -81,7 +81,7 @@ def test_text_input_through_group_unicode_editing_and_focus(display):
     group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_e, unicode="é"))
     group.handle_event(pg.event.Event(pg.TEXTINPUT, text="é世"))
     assert widget.get_text() == "abé世"
-    assert widget.cursor == 4
+    assert widget.caret == 4
     group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_LEFT))
     group.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_BACKSPACE))
     assert widget.get_text() == "ab世"
@@ -192,7 +192,7 @@ def test_color_adjustment_clamps_and_preserves_alpha():
     assert make_surface_darker(surface, -50).get_at((0, 0)) == (255, 60, 150, 42)
     assert make_surface_darker(surface, 50).get_at((0, 0)) == (200, 0, 50, 42)
     assert surface.get_at((0, 0)) == (250, 10, 100, 42)
-    assert ligther_color(pg.Color(0, 0, 0, 10), 50).a == 0
+    assert lighter_color(pg.Color(0, 0, 0, 10), 50).a == 0
 
 
 def test_image_loading_without_display_mode(tmp_path):
@@ -210,19 +210,98 @@ def test_alignment_requires_bounds(alignment):
         Label("Hello", "white", text_align=alignment)
 
 
-def test_group_is_stable_when_callback_removes_widget(display):
+def test_group_stops_at_first_consumer_and_survives_removal(display):
     group = Group()
-    first = button.ButtonText("First", ui_group=group)
     calls = []
+    first = button.ButtonText("First", lambda: group.remove(first), ui_group=group)
     second = button.ButtonText("Second", lambda: calls.append(True), ui_group=group)
-    first.connect(lambda: group.remove(first))
     first.draw(display, 10, 10)
     second.draw(display, 10, 10)
+    assert group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    assert group.handle_event(mouse(pg.MOUSEBUTTONUP))
+    assert calls == []
+    assert group.widgets == [second]
     group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
     group.handle_event(mouse(pg.MOUSEBUTTONUP))
     assert calls == [True]
     group.add(second)
-    assert group.objects == [second]
+    assert group.widgets == [second]
+
+
+def test_handle_event_reports_consumption(display):
+    btn = button.ButtonText("Click")
+    btn.draw(display, 10, 10)
+    assert not btn.handle_event(mouse(pg.MOUSEMOTION))
+    assert not btn.handle_event(mouse(pg.MOUSEBUTTONDOWN, (500, 500)))
+    assert btn.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    assert btn.handle_event(mouse(pg.MOUSEBUTTONUP))
+    assert not btn.handle_event(mouse(pg.MOUSEBUTTONUP))
+
+    bar = slider.Slider(0, 10, 1)
+    bar.draw(display, 100, 100, 200, 5)
+    assert not bar.handle_event(mouse(pg.MOUSEBUTTONDOWN, (500, 500)))
+    assert bar.handle_event(mouse(pg.MOUSEBUTTONDOWN, (150, 102)))
+    assert not bar.handle_event(mouse(pg.MOUSEMOTION, (160, 102)))
+    assert bar.handle_event(mouse(pg.MOUSEBUTTONUP, (160, 102)))
+    assert not bar.handle_event(mouse(pg.MOUSEBUTTONUP, (160, 102)))
+
+    field = text_input.TextInput(fixed_width=100)
+    field.draw(display, 10, 10)
+    assert not field.handle_event(pg.event.Event(pg.TEXTINPUT, text="x"))
+    assert field.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    assert field.handle_event(pg.event.Event(pg.TEXTINPUT, text="x"))
+    assert field.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_LEFT))
+    assert not field.handle_event(mouse(pg.MOUSEBUTTONDOWN, (500, 500)))
+
+    for widget in (Label("Hi", "white"), BarChart([1])):
+        widget.draw(display, 10, 10)
+        assert not widget.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+
+
+def test_clicking_a_button_unfocuses_text_input(display):
+    group = Group()
+    calls = []
+    btn = button.ButtonText("Click", lambda: calls.append(True), ui_group=group)
+    field = text_input.TextInput(fixed_width=100, ui_group=group)
+    btn.draw(display, 10, 10)
+    field.draw(display, 10, 100)
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, (20, 110)))
+    assert field.active
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    group.handle_event(mouse(pg.MOUSEBUTTONUP))
+    assert not field.active
+    assert calls == [True]
+
+
+def test_group_sets_cursor_of_hovered_widget(display, monkeypatch):
+    cursors = []
+    monkeypatch.setattr(utils, "set_system_cursor", cursors.append)
+    group = Group()
+    btn = button.ButtonText("Click", ui_group=group)
+    field = text_input.TextInput(fixed_width=100, ui_group=group)
+    Label("Label", "white", ui_group=group).draw(display, 10, 200)
+    btn.draw(display, 10, 10)
+    field.draw(display, 10, 100)
+
+    btn.handle_event(mouse(pg.MOUSEMOTION))
+    assert cursors == []
+    group.handle_event(mouse(pg.MOUSEMOTION))
+    group.handle_event(mouse(pg.MOUSEMOTION, (21, 21)))
+    assert cursors == [pg.SYSTEM_CURSOR_HAND]
+    group.handle_event(mouse(pg.MOUSEMOTION, (20, 110)))
+    group.handle_event(mouse(pg.MOUSEMOTION, (20, 205)))
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN, (20, 205)))
+    assert cursors == [pg.SYSTEM_CURSOR_HAND, pg.SYSTEM_CURSOR_IBEAM, pg.SYSTEM_CURSOR_ARROW]
+
+
+def test_widget_base_defaults():
+    group = Group()
+    widget = Widget(ui_group=group)
+    assert group.widgets == [widget]
+    assert widget.rect == pg.Rect(0, 0, 0, 0)
+    assert not widget.hovered and widget.cursor is None
+    assert not group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    group.update(0.1)
 
 
 def test_dropdown_consumes_clicks_over_other_widgets(display):
