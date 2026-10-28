@@ -22,6 +22,7 @@
 - When a widget consumes a `MOUSEMOTION` (an open dropdown menu under the pointer), `Group` marks the widgets after it as not hovered, so nothing underneath an open menu stays highlighted or sets the cursor.
 - `BarChart(values, *, labels=None, max_value=None, colors=None, font=None, label_color="black", speed=200)`: `values` is a property (a tuple; setting it replaces all bars and regenerates automatic colors when the count changes), `set_value(index, value)` updates one bar, `colors` cycle if there are fewer than bars, and `speed` is the animation rate in value units per second. Bars are solid with rounded tops.
 - The demo (`pygameuikit-demo`) is rewritten as a showcase: one card per widget family with its main options and API, and an event log that shows each callback as it fires. `--screenshot PATH` saves a frame as a PNG and exits without opening a window.
+- The README has a short guide to the main loop and a reference for every widget.
 
 ### Upgrading from 0.2
 
