@@ -23,7 +23,7 @@ class Label(Widget):
     def __init__(
         self,
         text: str,
-        color: ColorLike = "white",
+        color: ColorLike = "black",
         *,
         font: pg.font.Font | None = None,
         align: str = "left",

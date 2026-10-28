@@ -12,7 +12,7 @@
 - Remove `Group.draw`, which drew every widget at the same position.
 - Replace the eight button classes with four: `Button` (rounded text button), `ImageButton`, `IconButton` and `IconToggle`. All click on a left press and release inside the button, cancel on window focus loss, and expose `pressed`.
 - `Button` sizes itself to its text (or a fixed `width` with `align`), derives hover and pressed shades from `color`, picks black or white text for contrast unless `text_color` is given, and defaults to `border_radius=6` and `padding=(16, 8)`. `outline_color` draws a 2 px outline. `button.text` is a property that resizes the button.
-- `Label(text, color="white", *, font=None, align="left")` draws exactly at (x, y); `draw(surface, x, y, width=None)` aligns the text within `width`. Setting `text` or `color` re-renders only when the value changes.
+- `Label(text, color="black", *, font=None, align="left")` draws exactly at (x, y) (the color is now optional); `draw(surface, x, y, width=None)` aligns the text within `width`. Setting `text` or `color` re-renders only when the value changes.
 - `IconButton`'s clickable area and hover backdrop are the icon plus `padding` on each side, starting at (x, y).
 - Add `utils.shade(color, amount)`; `utils.best_contrast_color` uses perceived brightness and returns a `pygame.Color`.
 - Remove the duplicate root `src/demo.py` and `src/assets/`; the packaged `pygameuikit-demo` is the demo.
