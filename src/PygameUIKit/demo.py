@@ -5,8 +5,7 @@ import random
 import pygame
 from pygame import Color
 
-from PygameUIKit import Group, button, combobox, slider, text_input
-from PygameUIKit.barchart import BarChart
+from PygameUIKit import BarChart, Dropdown, Group, Slider, TextInput, button
 
 #
 #
@@ -31,10 +30,9 @@ class Demo:
         self.clock = pygame.time.Clock()
 
         self.easy_objects = Group()
-        self.text_input = text_input.TextInput(
+        self.text_input = TextInput(
             placeholder="This is a placeholder text",
-            fixed_width=200,
-            border_radius=2,
+            width=240,
             ui_group=self.easy_objects,
             font=def_font,
         )
@@ -46,22 +44,24 @@ class Demo:
             "Shuffle", self.change_values, color=BTN_BLUE, font=def_font, ui_group=self.easy_objects
         )
 
-        self.slider = slider.Slider(
-            0, 100, 1, show_value=True, ui_group=self.easy_objects, font=def_font
+        self.slider = Slider(
+            0,
+            100,
+            on_change=lambda value: self.change_values(),
+            show_value=True,
+            ui_group=self.easy_objects,
+            font=def_font,
         )
-        self.slider.connect(self.change_values)
 
-        self.dropdown = combobox.ComboBox(
-            ["Hello", "World", "And", "You"], ui_group=self.easy_objects, font=def_font
+        self.dropdown = Dropdown(
+            ["Hello", "World", "And", "You"],
+            on_change=self.set_text,
+            ui_group=self.easy_objects,
+            font=def_font,
         )
 
         data = [10, 20, 30, 40, 50]
         self.chart = BarChart(data, ui_group=self.easy_objects, max_value=100, font=def_font)
-
-        for i in range(4):
-            self.dropdown.add_action(
-                i, lambda i=i: self.text_input.set_text(self.dropdown.elements[i])
-            )
 
         self.dancing = False
 
@@ -96,7 +96,7 @@ class Demo:
         self.btn_pause.draw(win, 100, 200)
         self.btn_png.draw(win, 100, 300)
         self.btn_shuffle.draw(win, 100, 430)
-        self.slider.draw(win, 100, 400, 300, 5)
+        self.slider.draw(win, 100, 400, 300)
         self.chart.draw(win, 159, 164, 300, 100)
         self.dropdown.draw(win, 100, 100)
         pygame.display.flip()
@@ -104,7 +104,10 @@ class Demo:
     def change_values(self):
         i = random.randint(0, len(self.chart.values) - 1)
         new_value = random.randint(0, 100)
-        self.chart.change_value(i, new_value)
+        self.chart.set_value(i, new_value)
+
+    def set_text(self, text):
+        self.text_input.text = text
 
     def set_dancing(self, dancing):
         self.dancing = dancing

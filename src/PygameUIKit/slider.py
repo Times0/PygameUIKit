@@ -1,156 +1,149 @@
 import math
+from collections.abc import Callable
+from decimal import Decimal
 
-import pygame
-from pygame import Color
+import pygame as pg
+from pygame.typing import ColorLike
 
-from .utils import get_font
-from .widget import Widget
+from . import utils
+from .widget import Group, Widget
 
-COLOR_COMPLETED = Color(132, 214, 80)
-COLOR_IN_PROGRESS = Color(200, 200, 200)
 
-COLOR_CIRCLE1 = Color(241, 241, 241)
-COLOR_CIRCLE2 = COLOR_IN_PROGRESS
+def _decimals(*numbers: float) -> int:
+    """How many decimals it takes to write every number in ``numbers`` exactly."""
+    return max(0, *(-Decimal(str(n)).normalize().as_tuple().exponent for n in numbers))
 
 
 class Slider(Widget):
-    """Horizontal value slider: ``Slider(0, 100, 1).draw(surface, x, y, width, height)``."""
+    """A horizontal slider for numbers from ``min`` to ``max`` in multiples of ``step``.
 
-    cursor = pygame.SYSTEM_CURSOR_HAND
+    ``volume = Slider(0, 100, 5, value=50, on_change=set_volume, ui_group=ui)``;
+    ``volume.draw(screen, x, y, width=200)`` every frame. Drag or click the track, or press
+    Left/Right/Home/End while hovering it. Setting ``value`` does not call ``on_change``.
+    """
+
+    cursor = pg.SYSTEM_CURSOR_HAND
 
     def __init__(
         self,
-        min,
-        max,
-        step,
-        show_value=False,
-        font=None,
-        font_color=(0, 0, 0),
-        ui_group=None,
+        min: float,
+        max: float,
+        step: float = 1,
+        *,
+        value: float | None = None,
+        on_change: Callable[[float], None] | None = None,
+        show_value: bool = False,
+        font: pg.font.Font | None = None,
+        fill_color: ColorLike = (59, 130, 246),
+        track_color: ColorLike = (200, 200, 200),
+        knob_color: ColorLike = "white",
+        text_color: ColorLike = "black",
+        ui_group: Group | None = None,
     ):
-        super().__init__(ui_group=ui_group)
         if not all(math.isfinite(v) for v in (min, max, step)) or max <= min or step <= 0:
             raise ValueError("Slider requires finite min < max and step > 0")
         self.min = min
         self.max = max
-
         self.step = step
-        self.current_value = min
+        self._decimals = _decimals(min, step)
+        self.value = min if value is None else value
+        self.on_change = on_change
         self.show_value = show_value
-        # ui
-        self.circle_radius = 10
-        self.rect = pygame.Rect(0, 0, 100, self.circle_radius / 2)
+        self.font = font if font is not None else utils.get_font(24)
+        self.fill_color = pg.Color(fill_color)
+        self.track_color = pg.Color(track_color)
+        self.knob_color = pg.Color(knob_color)
+        self.text_color = pg.Color(text_color)
         self.dragging = False
-        self.font = font if font is not None else get_font()
-        self.font_color = font_color
-
-        self.on_change = lambda: None
-
-    def _hit(self, pos):
-        return self.rect.inflate(self.circle_radius + 10, self.circle_radius + 10).collidepoint(pos)
-
-    def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self.dragging = self._hit(event.pos)
-            if self.dragging:
-                self._value_from_position(event.pos[0])
-            return self.dragging
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            was_dragging = self.dragging
-            if self.dragging:
-                self._value_from_position(event.pos[0])
-            self.dragging = False
-            return was_dragging
-        if event.type == pygame.WINDOWFOCUSLOST:
-            self.dragging = False
-        elif event.type == pygame.MOUSEMOTION:
-            self.hovered = self._hit(event.pos)
-            self.circle_radius = 12 if self.hovered else 10
-            if self.dragging:
-                self._value_from_position(event.pos[0])
-        return False
-
-    def _value_from_position(self, x):
-        if self.rect.w > 0:
-            self.change_value_to(self.min + (x - self.rect.x) / self.rect.w * (self.max - self.min))
+        super().__init__(ui_group=ui_group)
+        self.rect = pg.Rect(0, 0, 200, 6)
 
     @property
-    def fraction(self):
-        return (self.current_value - self.min) / (self.max - self.min)
+    def value(self) -> float:
+        return self._value
 
-    def change_value_to(self, value):
+    @value.setter
+    def value(self, value: float) -> None:
         if not math.isfinite(value):
             raise ValueError("Slider value must be finite")
         value = max(self.min, min(self.max, value))
-        if value not in (self.min, self.max):
-            value = self.min + round((value - self.min) / self.step) * self.step
-            value = max(self.min, min(self.max, value))
-        if value != self.current_value:
-            self.current_value = value
-            self.on_change()
+        if value != self.max:
+            steps = round((value - self.min) / self.step)
+            value = min(self.max, round(self.min + steps * self.step, self._decimals))
+        self._value = value
 
-    def draw_bar(self, win):
-        """Draws the completed part and the in progress part of the slider"""
-        # Draw the completed part
-        pygame.draw.rect(
-            win,
-            COLOR_COMPLETED,
-            (self.rect.x, self.rect.y, self.rect.w * self.fraction, self.rect.h),
-        )
-        # Draw the in progress part
-        pygame.draw.rect(
-            win,
-            COLOR_IN_PROGRESS,
-            (
-                self.rect.x + self.rect.w * self.fraction,
-                self.rect.y,
-                self.rect.w * (1 - self.fraction),
-                self.rect.h,
-            ),
-        )
+    @property
+    def fraction(self) -> float:
+        return (self._value - self.min) / (self.max - self.min)
 
-    def draw_circle(self, win):
+    @property
+    def value_text(self) -> str:
+        """The value as shown by ``show_value``, with as many decimals as ``step`` needs."""
+        return f"{self._value:.{self._decimals}f}"
 
-        # Draw the circle
-        value_pos = self.rect.x + self.rect.w * self.fraction
-        y = self.rect.y + self.rect.h // 2
+    def _knob_radius(self) -> int:
+        radius = self.rect.h // 2 + 5
+        return radius + 2 if self.hovered or self.dragging else radius
 
-        rad_size = self.circle_radius if not self.dragging else 15
-        pygame.draw.circle(win, COLOR_CIRCLE1, (value_pos, y), rad_size)
-        pygame.draw.circle(win, COLOR_CIRCLE2, (value_pos, y), rad_size - 2)
+    def _hit(self, pos: tuple[int, int]) -> bool:
+        reach = self.rect.h // 2 + 7
+        return self.rect.inflate(2 * reach, 2 * reach - self.rect.h).collidepoint(pos)
 
-    def draw_value(self, win):
-        x, y, w, h = self.rect
+    def _change(self, value: float) -> None:
+        old = self._value
+        self.value = value
+        if self._value != old and self.on_change is not None:
+            self.on_change(self._value)
 
-        if "." in str(self.current_value):
-            value = round(self.current_value, 2)
-        else:
-            value = int(self.current_value)
+    def _change_from_x(self, x: int) -> None:
+        if self.rect.w > 0:
+            fraction = (x - self.rect.x) / self.rect.w
+            self._change(self.min + fraction * (self.max - self.min))
 
-        text = self.font.render(str(value), True, self.font_color)
-        win.blit(text, (x + w + 10, y + h // 2 - text.get_height() // 2))
+    def _nudge(self, steps: int) -> None:
+        position = (self._value - self.min) / self.step
+        position = math.floor(position + 1e-9) if steps > 0 else math.ceil(position - 1e-9)
+        self._change(self.min + (position + steps) * self.step)
 
-    def draw(self, win, x, y, w=100, h=5):
-        if w <= 0 or h <= 0:
+    def handle_event(self, event: pg.event.Event) -> bool:
+        if event.type == pg.WINDOWFOCUSLOST:
+            self.dragging = self.hovered = False
+        elif event.type == pg.MOUSEMOTION:
+            self.hovered = self._hit(event.pos)
+            if self.dragging:
+                self._change_from_x(event.pos[0])
+        elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+            self.dragging = self._hit(event.pos)
+            if self.dragging:
+                self._change_from_x(event.pos[0])
+            return self.dragging
+        elif event.type == pg.MOUSEBUTTONUP and event.button == 1 and self.dragging:
+            self._change_from_x(event.pos[0])
+            self.dragging = False
+            return True
+        elif event.type == pg.KEYDOWN and (self.hovered or self.dragging):
+            if event.key in (pg.K_LEFT, pg.K_RIGHT):
+                self._nudge(1 if event.key == pg.K_RIGHT else -1)
+            elif event.key in (pg.K_HOME, pg.K_END):
+                self._change(self.min if event.key == pg.K_HOME else self.max)
+            else:
+                return False
+            return True
+        return False
+
+    def draw(self, surface: pg.Surface, x: int, y: int, width: int = 200, height: int = 6) -> None:
+        if width <= 0 or height <= 0:
             raise ValueError("Slider dimensions must be positive")
-        self.rect = pygame.Rect(x, y, w, h)
-        self.draw_bar(win)
-        self.draw_circle(win)
+        self.rect = pg.Rect(x, y, width, height)
+        knob_x = x + round(width * self.fraction)
+        pg.draw.rect(surface, self.track_color, self.rect, border_radius=height // 2)
+        filled = pg.Rect(x, y, knob_x - x, height)
+        pg.draw.rect(surface, self.fill_color, filled, border_radius=height // 2)
+        center = (knob_x, self.rect.centery)
+        radius = self._knob_radius()
+        pg.draw.circle(surface, self.fill_color, center, radius)
+        pg.draw.circle(surface, self.knob_color, center, radius - 2)
         if self.show_value:
-            self.draw_value(win)
-
-    def get_value(self):
-        return self.current_value
-
-    def connect(
-        self,
-        f,
-        when="on_change",
-    ):
-        """
-        Connect a function to the slider events
-        :param f: function to call when the WHEN event is triggered
-        :param when: "on_change" only atm
-        """
-        if when == "on_change":
-            self.on_change = f
+            text = self.font.render(self.value_text, True, self.text_color)
+            reach = height // 2 + 7
+            surface.blit(text, text.get_rect(midleft=(self.rect.right + reach + 6, center[1])))
