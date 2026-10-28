@@ -90,6 +90,10 @@ class TextInput(Widget):
         # While focused, see clicks first so clicking another widget still unfocuses.
         return int(self._focused)
 
+    def _reset(self) -> None:
+        super()._reset()
+        self.focused = False
+
     def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
             self.focused = self.rect.collidepoint(event.pos)
@@ -97,7 +101,7 @@ class TextInput(Widget):
         if event.type == pg.MOUSEMOTION:
             self.hovered = self.rect.collidepoint(event.pos)
         elif event.type == pg.WINDOWFOCUSLOST:
-            self.focused = self.hovered = False
+            self._reset()
         if not self._focused:
             return False
         if event.type == pg.TEXTINPUT:
@@ -166,22 +170,24 @@ class TextInput(Widget):
         self.rect.topleft = (x, y)
         box = pg.Surface(self.rect.size, pg.SRCALPHA)
         area = box.get_rect()
-        pg.draw.rect(box, self.background_color, area, border_radius=self.border_radius)
+        background = self._paint(self.background_color)
+        pg.draw.rect(box, background, area, border_radius=self.border_radius)
         if self._focused:
             border, thickness = self.focus_color, 2
         else:
             border = utils.shade(self.border_color, 0.25) if self.hovered else self.border_color
             thickness = 1
-        pg.draw.rect(box, border, area, thickness, border_radius=self.border_radius)
+        pg.draw.rect(box, self._paint(border), area, thickness, border_radius=self.border_radius)
         box.set_clip(area.inflate(-2 * PAD_X, 0))
         text_y = (area.h - self.font.get_height()) // 2
         if self._text:
-            rendered = self.font.render(self._text, True, self.text_color)
+            rendered = self.font.render(self._text, True, self._paint(self.text_color))
             box.blit(rendered, (PAD_X - self._scroll, text_y))
         elif self.placeholder:
-            box.blit(
-                self.font.render(self.placeholder, True, self.placeholder_color), (PAD_X, text_y)
+            placeholder = self.font.render(
+                self.placeholder, True, self._paint(self.placeholder_color)
             )
+            box.blit(placeholder, (PAD_X, text_y))
         if self._focused:
             caret_x = PAD_X + self.font.size(self._text[: self.caret])[0] - self._scroll
             pg.draw.line(box, self.text_color, (caret_x, text_y), (caret_x, area.h - text_y - 1))

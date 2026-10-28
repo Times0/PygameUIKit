@@ -81,6 +81,10 @@ class Slider(Widget):
         """The value as shown by ``show_value``, with as many decimals as ``step`` needs."""
         return f"{self._value:.{self._decimals}f}"
 
+    def _reset(self) -> None:
+        super()._reset()
+        self.dragging = False
+
     def _knob_radius(self) -> int:
         radius = self.rect.h // 2 + 5
         return radius + 2 if self.hovered or self.dragging else radius
@@ -107,7 +111,7 @@ class Slider(Widget):
 
     def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.WINDOWFOCUSLOST:
-            self.dragging = self.hovered = False
+            self._reset()
         elif event.type == pg.MOUSEMOTION:
             self.hovered = self._hit(event.pos)
             if self.dragging:
@@ -136,14 +140,15 @@ class Slider(Widget):
             raise ValueError("Slider dimensions must be positive")
         self.rect = pg.Rect(x, y, width, height)
         knob_x = x + round(width * self.fraction)
-        pg.draw.rect(surface, self.track_color, self.rect, border_radius=height // 2)
+        fill = self._paint(self.fill_color)
+        pg.draw.rect(surface, self._paint(self.track_color), self.rect, border_radius=height // 2)
         filled = pg.Rect(x, y, knob_x - x, height)
-        pg.draw.rect(surface, self.fill_color, filled, border_radius=height // 2)
+        pg.draw.rect(surface, fill, filled, border_radius=height // 2)
         center = (knob_x, self.rect.centery)
         radius = self._knob_radius()
-        pg.draw.circle(surface, self.fill_color, center, radius)
-        pg.draw.circle(surface, self.knob_color, center, radius - 2)
+        pg.draw.circle(surface, fill, center, radius)
+        pg.draw.circle(surface, self._paint(self.knob_color), center, radius - 2)
         if self.show_value:
-            text = self.font.render(self.value_text, True, self.text_color)
+            text = self.font.render(self.value_text, True, self._paint(self.text_color))
             reach = height // 2 + 7
             surface.blit(text, text.get_rect(midleft=(self.rect.right + reach + 6, center[1])))

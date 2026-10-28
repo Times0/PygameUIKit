@@ -31,21 +31,11 @@ class Label(Widget):
     ):
         self.align = _check_align(align)
         self.font = font if font is not None else get_font()
-        self._text = text
-        self._color = pg.Color(color)
-        self.surface = self.font.render(text, True, self._color)
+        self.text = text
+        self.color = color
+        self._rendered: tuple[str, pg.Color] | None = None
         super().__init__(ui_group=ui_group)
         self.rect = self.surface.get_rect()
-
-    @property
-    def text(self) -> str:
-        return self._text
-
-    @text.setter
-    def text(self, value: str) -> None:
-        if value != self._text:
-            self.surface = self.font.render(value, True, self._color)
-            self._text = value
 
     @property
     def color(self) -> pg.Color:
@@ -53,14 +43,21 @@ class Label(Widget):
 
     @color.setter
     def color(self, value: ColorLike) -> None:
-        value = pg.Color(value)
-        if value != self._color:
-            self._color = value
-            self.surface = self.font.render(self._text, True, value)
+        self._color = pg.Color(value)
+
+    @property
+    def surface(self) -> pg.Surface:
+        """The rendered text; re-rendered only when ``text``, ``color`` or ``enabled`` change."""
+        key = (self.text, self._paint(self._color))
+        if key != self._rendered:
+            self._surface = self.font.render(key[0], True, key[1])
+            self._rendered = key
+        return self._surface
 
     def draw(self, surface: pg.Surface, x: int, y: int, width: int | None = None) -> None:
-        text_width, height = self.surface.get_size()
+        text = self.surface
+        text_width, height = text.get_size()
         width = text_width if width is None else width
         self.rect = pg.Rect(x, y, width, height)
         offset = {"left": 0, "center": (width - text_width) // 2, "right": width - text_width}
-        surface.blit(self.surface, (x + offset[self.align], y))
+        surface.blit(text, (x + offset[self.align], y))

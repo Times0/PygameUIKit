@@ -122,6 +122,11 @@ class Dropdown(Widget):
         self.is_open = is_open
         self.highlighted = self._index if is_open else None
 
+    def _reset(self) -> None:
+        super()._reset()
+        self._set_open(False)
+        self._pressed = None
+
     def _choose(self, index: int) -> None:
         self._set_open(False)
         if index != self._index:
@@ -131,9 +136,7 @@ class Dropdown(Widget):
 
     def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.WINDOWFOCUSLOST:
-            self._set_open(False)
-            self.hovered = False
-            self._pressed = None
+            self._reset()
         elif event.type == pg.MOUSEMOTION:
             self.hovered = self._covers(event.pos)
             if self.is_open:
@@ -180,9 +183,10 @@ class Dropdown(Widget):
         return utils.best_contrast_color(self.color)
 
     def _draw_box(self, surface: pg.Surface, rect: pg.Rect, fill: pg.Color) -> None:
-        pg.draw.rect(surface, fill, rect, border_radius=self.border_radius)
+        pg.draw.rect(surface, self._paint(fill), rect, border_radius=self.border_radius)
         if self.outline_color is not None:
-            pg.draw.rect(surface, self.outline_color, rect, 1, border_radius=self.border_radius)
+            outline = self._paint(self.outline_color)
+            pg.draw.rect(surface, outline, rect, 1, border_radius=self.border_radius)
 
     def draw(self, surface: pg.Surface, x: int, y: int) -> None:
         self.rect = pg.Rect(x, y, self._width(), self.font.get_height() + 2 * PAD_Y)
@@ -194,9 +198,9 @@ class Dropdown(Widget):
             fill = self.color
         self._draw_box(surface, self.rect, fill)
         label = self._header
-        label.text, label.color = self.value, self._text_color()
+        label.text, label.color, label.enabled = self.value, self._text_color(), self.enabled
         label.draw(surface, x + PAD_X, self.rect.centery - label.surface.get_height() // 2)
-        self._draw_arrow(surface, label.color)
+        self._draw_arrow(surface, self._paint(label.color))
         if not self.is_open:
             return
         menu = self._menu_rect()

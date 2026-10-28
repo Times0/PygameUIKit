@@ -1,3 +1,4 @@
+import inspect
 import subprocess
 import sys
 
@@ -5,7 +6,14 @@ import pygame as pg
 import pytest
 
 from PygameUIKit import BarChart, Dropdown, Group, Label, Widget, button, slider, text_input, utils
-from PygameUIKit.utils import best_contrast_color, lighter_color, load_image, shade
+from PygameUIKit.utils import (
+    best_contrast_color,
+    disabled_color,
+    disabled_image,
+    lighter_color,
+    load_image,
+    shade,
+)
 
 
 def mouse(kind, pos=(20, 20), button_number=1):
@@ -717,3 +725,147 @@ def test_chart_values_setter_and_animation_speed(display):
     custom.draw(display, 0, 0)
     with pytest.raises(ValueError):
         widget.values = [1, -1]
+
+
+def interactive_widgets(group, calls):
+    return [
+        button.Button("Click", lambda: calls.append("click"), ui_group=group),
+        button.IconToggle(pg.Surface((20, 20)), pg.Surface((20, 20)), calls.append, ui_group=group),
+        slider.Slider(0, 10, on_change=calls.append, ui_group=group),
+        text_input.TextInput(width=100, on_change=calls.append, ui_group=group),
+        Dropdown(["A", "B"], on_change=calls.append, ui_group=group),
+    ]
+
+
+def poke(widget, send):
+    """Hover, click, type into and press keys on ``widget``; return what was consumed."""
+    pos = widget.rect.center
+    events = [mouse(pg.MOUSEMOTION, pos), mouse(pg.MOUSEBUTTONDOWN, pos)]
+    events += [mouse(pg.MOUSEBUTTONUP, pos), pg.event.Event(pg.TEXTINPUT, text="x")]
+    events += [pg.event.Event(pg.KEYDOWN, key=key) for key in (pg.K_RIGHT, pg.K_DOWN, pg.K_RETURN)]
+    return [send(event) for event in events]
+
+
+@pytest.mark.parametrize("state", ["enabled", "visible"])
+@pytest.mark.parametrize("through_group", [True, False])
+def test_disabled_and_hidden_widgets_ignore_events(state, through_group, display):
+    group = Group()
+    calls = []
+    widgets = interactive_widgets(group, calls)
+    for i, widget in enumerate(widgets):
+        widget.draw(display, 20, 20 + 60 * i)
+        setattr(widget, state, False)
+    for widget in widgets:
+        consumed = poke(widget, group.handle_event if through_group else widget.handle_event)
+        assert not any(consumed)
+        assert not widget.hovered
+    assert calls == []
+    assert not widgets[3].focused and not widgets[4].is_open
+    setattr(widgets[0], state, True)
+    click(widgets[0], widgets[0].rect.center)
+    assert calls == ["click"]
+
+
+@pytest.mark.parametrize("state", ["enabled", "visible"])
+def test_disabling_or_hiding_clears_interaction_state(state, display):
+    btn, toggle, bar, field, menu = interactive_widgets(Group(), [])
+    for i, widget in enumerate((btn, bar, field, menu)):
+        widget.draw(display, 20, 20 + 60 * i)
+        widget.handle_event(mouse(pg.MOUSEMOTION, widget.rect.center))
+        widget.handle_event(mouse(pg.MOUSEBUTTONDOWN, widget.rect.center))
+    menu.handle_event(mouse(pg.MOUSEBUTTONUP, menu.rect.center))
+    assert btn.pressed and bar.dragging and field.focused and menu.is_open
+    for widget in (btn, bar, field, menu):
+        assert widget.hovered
+        setattr(widget, state, False)
+        assert not widget.hovered and widget.event_priority == 0
+    assert not btn.pressed and not bar.dragging and not field.focused and not menu.is_open
+    setattr(btn, state, True)
+    assert not btn.handle_event(mouse(pg.MOUSEBUTTONUP, btn.rect.center))
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: Label("Hello"),
+        lambda: button.Button("Hello"),
+        lambda: button.ImageButton(pg.Surface((30, 30)), text="Hello"),
+        lambda: button.IconButton(pg.Surface((30, 30))),
+        lambda: button.IconToggle(pg.Surface((30, 30)), pg.Surface((30, 30))),
+        lambda: slider.Slider(0, 10, value=5, show_value=True),
+        lambda: text_input.TextInput("Hello"),
+        lambda: Dropdown(["Hello", "World"]),
+        lambda: BarChart([1, 2], labels=["A", "B"]),
+    ],
+)
+def test_hidden_widgets_draw_nothing_and_disabled_ones_draw_dimmed(factory, display):
+    widget = factory()
+
+    def pixels_after_draw():
+        display.fill((40, 120, 200))
+        widget.draw(display, 10, 10)
+        return pg.image.tobytes(display, "RGB")
+
+    display.fill((40, 120, 200))
+    background = pg.image.tobytes(display, "RGB")
+    normal = pixels_after_draw()
+    widget.enabled = False
+    disabled = pixels_after_draw()
+    widget.visible = False
+    assert pixels_after_draw() == background
+    widget.enabled = widget.visible = True
+    assert pixels_after_draw() == normal
+    assert normal != background and disabled not in (normal, background)
+
+
+def test_cursor_resets_when_the_hovered_widget_is_disabled_or_hidden(display, monkeypatch):
+    cursors = []
+    monkeypatch.setattr(utils, "set_system_cursor", cursors.append)
+    group = Group()
+    btn = button.Button("Busy", lambda: setattr(btn, "enabled", False), ui_group=group)
+    btn.draw(display, 10, 10)
+    group.handle_event(mouse(pg.MOUSEMOTION))
+    assert cursors == [pg.SYSTEM_CURSOR_HAND]
+    group.handle_event(mouse(pg.MOUSEBUTTONDOWN))
+    group.handle_event(mouse(pg.MOUSEBUTTONUP))
+    assert cursors[-1] == pg.SYSTEM_CURSOR_ARROW
+    group.handle_event(mouse(pg.MOUSEMOTION, (21, 21)))
+    assert cursors[-1] == pg.SYSTEM_CURSOR_ARROW and not btn.hovered
+    btn.enabled = True
+    group.handle_event(mouse(pg.MOUSEMOTION))
+    assert cursors[-1] == pg.SYSTEM_CURSOR_HAND
+    btn.visible = False
+    group.update(0.1)
+    assert cursors == [pg.SYSTEM_CURSOR_HAND, pg.SYSTEM_CURSOR_ARROW] * 2
+
+
+def test_custom_widgets_get_the_state_checks(display):
+    class Box(Widget):
+        def handle_event(self, event):
+            return True
+
+        def draw(self, surface, x, y, size=10):
+            self.rect = pg.draw.rect(surface, "red", (x, y, size, size))
+
+    box = Box()
+    assert box.enabled and box.visible and box.handle_event(mouse(pg.MOUSEMOTION))
+    box.enabled = False
+    assert box.handle_event(mouse(pg.MOUSEMOTION)) is False
+    box.enabled, box.visible = True, False
+    box.draw(display, 5, 5)
+    assert box.rect.size == (0, 0)
+    assert list(inspect.signature(Box.draw).parameters) == ["self", "surface", "x", "y", "size"]
+
+
+def test_disabled_color_and_image_helpers():
+    blue = pg.Color(59, 130, 246, 200)
+    dimmed = disabled_color(blue)
+    assert dimmed.a == 200
+    assert dimmed.hsva[1] < blue.hsva[1] / 2 and sum(dimmed[:3]) > sum(blue[:3])
+    assert disabled_color("white") == pg.Color("white")
+    image = pg.Surface((4, 3), pg.SRCALPHA)
+    image.fill("red")
+    faded = disabled_image(image)
+    assert faded.get_size() == (4, 3) and faded.get_alpha() < 255
+    r, g, b, _ = faded.get_at((0, 0))
+    assert r == g == b
